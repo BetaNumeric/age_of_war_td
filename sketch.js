@@ -41,6 +41,10 @@ let oldScore = 0;
 let Coins = 0;
 let pauseSelect = 0;
 let pauseHover = -1;
+let pauseOverlayDrawn = false;
+let gameOverSelect = 0;
+let gameOverHover = -1;
+let gameOverOverlayDrawn = false;
 let mX = 0;
 let mY = 0;
 let mZ = 0;
@@ -210,6 +214,11 @@ function setup() {
 function draw() {
   syncCursorVisibility();
 
+  // Reset overlay flag when not paused so it can be drawn next time we enter Pause
+  if (gameState !== "Pause") pauseOverlayDrawn = false;
+  // Reset GameOver overlay flag when not GameOver so it can be drawn next time
+  if (gameState !== "GameOver") gameOverOverlayDrawn = false;
+
   if (gameState === "loading") {
     background(0);
     fill(255);
@@ -335,11 +344,19 @@ function draw() {
   }
 
   if (gameState === "Pause") {
-    cursor();
-    textAlign(CENTER, CENTER);
-    textSize(75);
-    fill(255);
-    text("Pause", width / 2, height / 16 * 6);
+    // Draw a single semi-transparent overlay once when entering Pause
+    if (!pauseOverlayDrawn) {
+      noStroke();
+      fill(0, 150);
+      rect(0, 0, width, height);
+      // draw title once
+      textAlign(CENTER, CENTER);
+      textSize(75);
+      fill(255);
+      // move title higher so buttons remain unobstructed
+      text("Pause", width / 2, height / 16 * 4);
+      pauseOverlayDrawn = true;
+    }
 
     // Button layout (flat, neutral, lower so it doesn't overlap title)
     const pauseBtnW = 300;
@@ -371,19 +388,42 @@ function draw() {
   }
 
   if (gameState === "GameOver") {
-    cursor();
-    textAlign(CENTER, CENTER);
-    textSize(75);
-    fill(255);
-    text("Game Over!", width / 2, height / 16 * 6);
-    textSize(25);
-    if (oldScore < XP) {
-      fill(255, 255, 0);
-      text(`New Highscore: ${XP}!`, width / 2, height / 16 * 8);
-    } else {
-      text(`Score: ${XP}`, width / 2, height / 16 * 8);
-      text(`Highscore: ${highScore[0]}`, width / 2, height / 16 * 9);
+    // Draw a single semi-transparent overlay once when entering GameOver
+    if (!gameOverOverlayDrawn) {
+      noStroke();
+      fill(0, 150);
+      rect(0, 0, width, height);
+      // draw title once
+      textAlign(CENTER, CENTER);
+      textSize(75);
+      fill(255);
+      // move title and scores higher so buttons stay clear
+      text("Game Over!", width / 2, height / 16 * 4);
+      textSize(25);
+      if (oldScore < XP) {
+        fill(255, 255, 0);
+        text(`New Highscore: ${XP}!`, width / 2, height / 16 * 6.2);
+      } else {
+        text(`Score: ${XP}`, width / 2, height / 16 * 5.8);
+        text(`Highscore: ${highScore[0]}`, width / 2, height / 16 * 6.5);
+      }
+      gameOverOverlayDrawn = true;
+      gameOverSelect = 0;
     }
+
+    // draw two simple flat, colorless buttons (Play again, Menu)
+    for (let i = 0; i < 2; i++) {
+      const r = getGameOverButtonRect(i);
+      noStroke();
+      if (gameOverHover === i) fill(200);
+      else fill(230);
+      rect(r.x, r.y, r.w, r.h);
+      textSize(22);
+      fill(30);
+      const label = i === 0 ? "Play again" : "Menu";
+      text(label, r.x + r.w / 2, r.y + r.h / 2);
+    }
+
     audioController.pauseMusic();
   }
 }
@@ -400,6 +440,18 @@ function getPauseButtonRect(index) {
   return { x: bx, y: by, w: pauseBtnW, h: pauseBtnH };
 }
 
+// GameOver uses the same layout as Pause (flat buttons lower on screen)
+function getGameOverButtonRect(index) {
+  const w = 300;
+  const h = 52;
+  const x = width / 2 - w / 2;
+  const firstY = height / 16 * 8.5 - h / 2;
+  const gap = 18;
+  const bx = x;
+  const by = firstY + index * (h + gap);
+  return { x: bx, y: by, w: w, h: h };
+}
+
 function syncCursorVisibility() {
   if (gameState === "Start" && select) noCursor();
   else cursor();
@@ -412,6 +464,13 @@ function mouseMoved() {
     if (mouseX >= r0.x && mouseX <= r0.x + r0.w && mouseY >= r0.y && mouseY <= r0.y + r0.h) pauseHover = 0;
     else if (mouseX >= r1.x && mouseX <= r1.x + r1.w && mouseY >= r1.y && mouseY <= r1.y + r1.h) pauseHover = 1;
     else pauseHover = -1;
+  }
+  else if (gameState === "GameOver") {
+    const g0 = getGameOverButtonRect(0);
+    const g1 = getGameOverButtonRect(1);
+    if (mouseX >= g0.x && mouseX <= g0.x + g0.w && mouseY >= g0.y && mouseY <= g0.y + g0.h) gameOverHover = 0;
+    else if (mouseX >= g1.x && mouseX <= g1.x + g1.w && mouseY >= g1.y && mouseY <= g1.y + g1.h) gameOverHover = 1;
+    else gameOverHover = -1;
   }
 }
 
@@ -537,6 +596,18 @@ function handleClick() {
   }
 
   if (gameState === "GameOver") {
+    const g0 = getGameOverButtonRect(0);
+    const g1 = getGameOverButtonRect(1);
+    if (mouseX >= g0.x && mouseX <= g0.x + g0.w && mouseY >= g0.y && mouseY <= g0.y + g0.h) {
+      newGame();
+    }
+    if (mouseX >= g1.x && mouseX <= g1.x + g1.w && mouseY >= g1.y && mouseY <= g1.y + g1.h) {
+      gameState = "SelectMap";
+      drawMaps();
+    }
+  }
+
+  if (gameState === "GameOver") {
     gameState = "SelectMap";
     drawMaps();
   }
@@ -546,9 +617,18 @@ function keyPressed() {
   ensureAudio();
 
   if (gameState === "GameOver") {
-    gameState = "SelectMap";
-    drawMaps();
-    return false;
+    if (keyCode === ENTER && gameOverSelect === 0) {
+      newGame();
+      return false;
+    }
+    if (keyCode === ENTER && gameOverSelect === 1) {
+      gameState = "SelectMap";
+      drawMaps();
+      return false;
+    }
+
+    if (keyCode === UP_ARROW) gameOverSelect--;
+    else if (keyCode === DOWN_ARROW) gameOverSelect++;
   }
 
     if (key === "m" || key === "M") {
