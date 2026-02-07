@@ -1,0 +1,1075 @@
+﻿const MAP_FILES = [
+  "towerDefense1.map",
+  "towerDefense2.map",
+  "towerDefense3.map",
+  "towerDefense4.map",
+  "towerDefense5.map",
+  "towerDefense6.map",
+  "towerDefenseBlank.map"
+];
+
+const TILE_LETTERS = ["B", "C", "F", "G", "M", "P", "R", "S", "T", "W", "X", "Y", "Z"];
+
+let mapData = {};
+let tileImages = {};
+
+let gameMap, map1, map2, map3, map4, map5, map6;
+let enemies = [];
+let towers = [];
+let uSelect = true;
+let select = false;
+let allPlaced = true;
+let lvUp = false;
+let boss = false;
+let startX = 0;
+let startY = 0;
+let bX = 0;
+let bY = 0;
+let Xx = 0;
+let Xy = 0;
+let Yx = 0;
+let Yy = 0;
+let Zx = 0;
+let Zy = 0;
+let lastSelect = 0;
+let waveL = 0;
+let waveN = 0;
+let waveType = 0;
+let enemyType = 0;
+let XP = 0;
+let oldScore = 0;
+let Coins = 0;
+let pauseSelect = 0;
+let mX = 0;
+let mY = 0;
+let mZ = 0;
+let damageX = 0;
+let rangeX = 0;
+let rateX = 0;
+let damageY = 0;
+let rangeY = 0;
+let rateY = 0;
+let damageZ = 0;
+let rangeZ = 0;
+let rateZ = 0;
+let waveT = 0;
+let HP = 100;
+let gameState = "loading";
+let mapName = "towerDefense6.map";
+let Age = "Past";
+let typeX = "";
+let typeY = "";
+let typeZ = "";
+let extraX = "";
+let extraY = "";
+let extraZ = "";
+let highScore = ["0"];
+let defaultHighScore = ["0"];
+const HIGH_SCORE_KEY = "towerDefenseHighScore_v1";
+let autoPaused = false;
+let ignoreNextDelta = false;
+
+let knight, rider, lancer, boss1;
+let soldier, rocket, enemyTank, boss2;
+let robot, spaceship, ball;
+let castle, military, future;
+let cannon, cannon2, catapult, catapult2, crossbow, crossbow2;
+let tank, tank2, turret, turretB, turretT, turretT2, thrower, thrower2;
+let laserCannon, laserCannon2, wavegun, wavegunB, wavegunT, wavegunT2, railgun, railgun2;
+let volumeImgs = [null, null, null, null];
+
+let audioController;
+let music = "music";
+let cannonShot = "cannonShot", catapultShot = "catapultShot", crossbowShot = "crossbowShot";
+let tankShot = "tankShot", turretShot = "turretShot", throwerShot = "throwerShot";
+let lasercannonShot = "lasercannonShot", wavegunShot = "wavegunShot", railgunShot = "railgunShot";
+let levelUpSound = "levelUpSound", deleteSound = "deleteSound", place = "place", coins = "coins", errorSound = "errorSound", gameOver = "gameOver";
+
+function preload() {
+  audioController = new AudioController();
+
+  for (const file of MAP_FILES) {
+    mapData[file] = loadStrings(`data/${file}`);
+  }
+
+  for (const letter of TILE_LETTERS) {
+    tileImages[letter] = loadImage(`data/images/${letter}.png`);
+  }
+
+  knight = loadImage("data/images/knight.png");
+  lancer = loadImage("data/images/lancer.png");
+  rider = loadImage("data/images/rider.png");
+  boss1 = loadImage("data/images/boss1.png");
+  soldier = loadImage("data/images/soldier.png");
+  rocket = loadImage("data/images/rocket.png");
+  enemyTank = loadImage("data/images/enemyTank.png");
+  boss2 = loadImage("data/images/boss2.png");
+  robot = loadImage("data/images/robot.png");
+  spaceship = loadImage("data/images/spaceship.png");
+  ball = loadImage("data/images/ball.png");
+  castle = loadImage("data/images/castle.png");
+  military = loadImage("data/images/military.png");
+  future = loadImage("data/images/future.png");
+  cannon = loadImage("data/images/cannon.png");
+  cannon2 = loadImage("data/images/cannon2.png");
+  catapult = loadImage("data/images/catapult.png");
+  catapult2 = loadImage("data/images/catapult2.png");
+  crossbow = loadImage("data/images/crossbow.png");
+  crossbow2 = loadImage("data/images/crossbow2.png");
+  tank = loadImage("data/images/tank.png");
+  tank2 = loadImage("data/images/tank2.png");
+  turret = loadImage("data/images/turret.png");
+  turretB = loadImage("data/images/turretB.png");
+  turretT = loadImage("data/images/turretT.png");
+  turretT2 = loadImage("data/images/turretT2.png");
+  thrower = loadImage("data/images/thrower.png");
+  thrower2 = loadImage("data/images/thrower2.png");
+  laserCannon = loadImage("data/images/laserCannon.png");
+  laserCannon2 = loadImage("data/images/laserCannon2.png");
+  wavegun = loadImage("data/images/wavegun.png");
+  wavegunB = loadImage("data/images/wavegunB.png");
+  wavegunT = loadImage("data/images/wavegunT.png");
+  wavegunT2 = loadImage("data/images/wavegunT2.png");
+  railgun = loadImage("data/images/railgun.png");
+  railgun2 = loadImage("data/images/railgun2.png");
+  volumeImgs[0] = loadImage("data/images/volume0.png");
+  volumeImgs[1] = loadImage("data/images/volume1.png");
+  volumeImgs[2] = loadImage("data/images/volume2.png");
+  volumeImgs[3] = loadImage("data/images/volume3.png");
+
+  audioController.loadMusic("data/sounds/music.mp3");
+  audioController.loadSFX(cannonShot, "data/sounds/cannonShot.mp3");
+  audioController.loadSFX(catapultShot, "data/sounds/catapultShot.mp3");
+  audioController.loadSFX(crossbowShot, "data/sounds/crossbowShot.mp3");
+  audioController.loadSFX(tankShot, "data/sounds/tankShot.mp3");
+  audioController.loadSFX(turretShot, "data/sounds/turretShot.mp3");
+  audioController.loadSFX(throwerShot, "data/sounds/throwerShot.mp3");
+  audioController.loadSFX(lasercannonShot, "data/sounds/lasercannonShot.mp3");
+  audioController.loadSFX(wavegunShot, "data/sounds/wavegunShot.mp3");
+  audioController.loadSFX(railgunShot, "data/sounds/railgunShot.mp3");
+  audioController.loadSFX(levelUpSound, "data/sounds/levelUp.mp3");
+  audioController.loadSFX(place, "data/sounds/place.mp3");
+  audioController.loadSFX(deleteSound, "data/sounds/delete.mp3");
+  audioController.loadSFX(coins, "data/sounds/coins.mp3");
+  audioController.loadSFX(errorSound, "data/sounds/error.mp3");
+  audioController.loadSFX(gameOver, "data/sounds/gameOver.mp3");
+
+  defaultHighScore = loadStrings("data/highScore.txt");
+}
+
+function setup() {
+  createCanvas(1024, 704);
+  background(0);
+  textAlign(CENTER, CENTER);
+  textSize(30);
+  text("loading...", width / 2, height / 2);
+  imageMode(CENTER);
+  frameRate(60);
+
+  setAudioEnabled(true);
+
+  gameState = "loading";
+  loadHighScore();
+  
+  document.addEventListener("contextmenu", (event) => event.preventDefault());
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (gameState === "Start") {
+        autoPaused = true;
+        gameState = "Pause";
+        audioController.pauseMusic();
+      }
+      return;
+    }
+    if (autoPaused && gameState === "Pause") {
+      autoPaused = false;
+      gameState = "Start";
+      audioController.playMusic();
+    }
+    ignoreNextDelta = true;
+  });
+
+  window.addEventListener("blur", () => {
+    if (gameState === "Start") {
+      autoPaused = true;
+      gameState = "Pause";
+      audioController.pauseMusic();
+    }
+  });
+  window.addEventListener("focus", () => {
+    if (autoPaused && gameState === "Pause") {
+      autoPaused = false;
+      gameState = "Start";
+      audioController.playMusic();
+    }
+    ignoreNextDelta = true;
+  });
+}
+
+function draw() {
+  syncCursorVisibility();
+
+  if (gameState === "loading") {
+    background(0);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    text("Loading assets...", width/2, height/2);
+    if (audioController.isReady()) {
+        gameState = "SelectMap";
+        drawMaps();
+    }
+    return;
+  }
+  
+  if (gameState === "SelectMap") {
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(50);
+    text("Select your Map:", width / 2, height / 6);
+    textAlign(LEFT, TOP);
+    textSize(20);
+    fill(255, 255, 0);
+    text(`Highscore: ${highScore[0]}`, 7, 20);
+    strokeWeight(1);
+    noFill();
+    if (mouseX > width / 20 && mouseY > height / 4 && mouseX < width / 20 + width / 4 && mouseY < height / 4 + height / 4)
+      stroke(255);
+    rect(width / 20, height / 4, width / 4, height / 4);
+    stroke(0);
+    if (
+      mouseX > width / 20 * 7.5 &&
+      mouseY > height / 4 &&
+      mouseX < width / 20 * 7.5 + width / 4 &&
+      mouseY < height / 4 + height / 4
+    )
+      stroke(255);
+    rect(width / 20 * 7.5, height / 4, width / 4, height / 4);
+    stroke(0);
+    if (
+      mouseX > width / 20 * 14 &&
+      mouseY > height / 4 &&
+      mouseX < width / 20 * 14 + width / 4 &&
+      mouseY < height / 4 + height / 4
+    )
+      stroke(255);
+    rect(width / 20 * 14, height / 4, width / 4, height / 4);
+    stroke(0);
+    if (
+      mouseX > width / 20 &&
+      mouseY > height / 2 + height / 20 &&
+      mouseX < width / 20 + width / 4 &&
+      mouseY < height / 2 + height / 20 + height / 4
+    )
+      stroke(255);
+    rect(width / 20, height / 2 + height / 20, width / 4, height / 4);
+    stroke(0);
+    if (
+      mouseX > width / 20 * 7.5 &&
+      mouseY > height / 2 + height / 20 &&
+      mouseX < width / 20 * 7.5 + width / 4 &&
+      mouseY < height / 2 + height / 20 + height / 4
+    )
+      stroke(255);
+    rect(width / 20 * 7.5, height / 2 + height / 20, width / 4, height / 4);
+    stroke(0);
+    if (
+      mouseX > width / 20 * 14 &&
+      mouseY > height / 2 + height / 20 &&
+      mouseX < width / 20 * 14 + width / 4 &&
+      mouseY < height / 2 + height / 20 + height / 4
+    )
+      stroke(255);
+    rect(width / 20 * 14, height / 2 + height / 20, width / 4, height / 4);
+    stroke(0);
+  }
+
+  if (gameState === "Start") {
+    if (Age === "Past") background(35, 90, 0);
+    if (Age === "Present") background(90, 60, 20);
+    if (Age === "Future") background(20, 50, 90);
+
+    gameMap.draw(0, 0);
+    wave();
+
+    for (let i = 0; i < towers.length; i++) {
+      towers[i].draw();
+      if (towers[i].del === true) {
+        playSound(deleteSound);
+        playSound(deleteSound);
+        playSound(errorSound);
+        cursor();
+        towers.splice(i, 1);
+        i--;
+        uSelect = true;
+      }
+    }
+
+    for (let i = 0; i < enemies.length; i++) {
+      enemies[i].move();
+      enemies[i].draw();
+      if (enemies[i].base()) {
+        if (HP > 0) HP -= 10;
+        if (enemies[i].type === "Boss1") HP = 0;
+        if (enemies[i].type === "Boss2") HP = 0;
+        if (HP <= 0) {
+          gameState = "GameOver";
+          playSound(gameOver);
+          fill(0, 110);
+          rect(0, 0, width, height);
+          if (Number(highScore[0]) < XP) saveHighScore(XP);
+        }
+        enemies.splice(i, 1);
+        i--;
+      }
+    }
+
+    if (Age === "Past" && XP >= 150) lvUp = true;
+    if (Age === "Present" && XP >= 300) lvUp = true;
+
+    if (Age === "Past") image(castle, bX, bY);
+    if (Age === "Present") image(military, bX, bY);
+    if (Age === "Future") image(future, bX, bY);
+
+    GUI();
+  }
+
+  if (gameState === "Pause") {
+    cursor();
+    textAlign(LEFT, TOP);
+    textSize(20);
+    fill(255, 255, 0);
+    textSize(75);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    text("Pause", width / 2, height / 16 * 6);
+    textSize(20);
+    fill(128);
+    if (pauseSelect === 0) fill(255);
+    text("Continue", width / 2, height / 16 * 7);
+    fill(128);
+    if (pauseSelect === 1) fill(255);
+    text("Menu", width / 2, height / 16 * 8);
+    if (pauseSelect > 1) pauseSelect = 0;
+    if (pauseSelect < 0) pauseSelect = 1;
+    audioController.pauseMusic();
+  }
+
+  if (gameState === "GameOver") {
+    cursor();
+    textAlign(CENTER, CENTER);
+    textSize(75);
+    fill(255);
+    text("Game Over!", width / 2, height / 16 * 6);
+    textSize(25);
+    if (oldScore < XP) {
+      fill(255, 255, 0);
+      text(`New Highscore: ${XP}!`, width / 2, height / 16 * 8);
+    } else {
+      text(`Score: ${XP}`, width / 2, height / 16 * 8);
+      text(`Highscore: ${highScore[0]}`, width / 2, height / 16 * 9);
+    }
+    audioController.pauseMusic();
+  }
+}
+
+function syncCursorVisibility() {
+  if (gameState === "Start" && select) noCursor();
+  else cursor();
+}
+
+function mouseMoved() {
+  if (gameState === "Pause") {
+    if (mouseY < height / 16 * 7.5) pauseSelect = 0;
+    if (mouseY >= height / 16 * 7.5) pauseSelect = 1;
+  }
+}
+
+function mouseClicked() {
+  if (mouseButton === LEFT) handleClick();
+}
+
+function mousePressed() {
+  if (mouseButton === RIGHT) {
+    if (mouseX < 32 && mouseY < 32) {
+      if (audioController) {
+        audioController.toggleMusicMuted();
+      }
+      return false;
+    }
+    handleClick();
+    return false;
+  }
+}
+
+function handleClick() {
+  ensureAudio();
+
+  if (gameState === "SelectMap") {
+    if (mouseX > width / 20 && mouseY > height / 4 && mouseX < width / 20 + width / 4 && mouseY < height / 4 + height / 4) {
+      mapName = "towerDefense1.map";
+      newGame();
+    }
+    if (
+      mouseX > width / 20 * 7.5 &&
+      mouseY > height / 4 &&
+      mouseX < width / 20 * 7.5 + width / 4 &&
+      mouseY < height / 4 + height / 4
+    ) {
+      mapName = "towerDefense2.map";
+      newGame();
+    }
+    if (
+      mouseX > width / 20 * 14 &&
+      mouseY > height / 4 &&
+      mouseX < width / 20 * 14 + width / 4 &&
+      mouseY < height / 4 + height / 4
+    ) {
+      mapName = "towerDefense3.map";
+      newGame();
+    }
+    if (
+      mouseX > width / 20 &&
+      mouseY > height / 2 + height / 20 &&
+      mouseX < width / 20 + width / 4 &&
+      mouseY < height / 2 + height / 20 + height / 4
+    ) {
+      mapName = "towerDefense4.map";
+      newGame();
+    }
+    if (
+      mouseX > width / 20 * 7.5 &&
+      mouseY > height / 2 + height / 20 &&
+      mouseX < width / 20 * 7.5 + width / 4 &&
+      mouseY < height / 2 + height / 20 + height / 4
+    ) {
+      mapName = "towerDefense5.map";
+      newGame();
+    }
+    if (
+      mouseX > width / 20 * 14 &&
+      mouseY > height / 2 + height / 20 &&
+      mouseX < width / 20 * 14 + width / 4 &&
+      mouseY < height / 2 + height / 20 + height / 4
+    ) {
+      mapName = "towerDefense6.map";
+      newGame();
+    }
+  }
+
+  if (gameState === "Start") {
+    if (mouseX < 32 && mouseY < 32) {
+      if (audioController) {
+        audioController.cycleVolumeLevel();
+      }
+    }
+
+    if (mouseY < 544) uSelect = true;
+
+    if (towers.length > 0)
+      for (let i = 0; i < towers.length; i++)
+        if (towers[i].mouseInside()) {
+          lastSelect = i;
+          uSelect = false;
+        }
+
+    trade();
+    towerSelect();
+
+    if (lvUp && mouseX > width - 90 && mouseY > height - 60 && mouseX < width - 90 + 75 && mouseY < height - 60 + 45) {
+      if (boss === false) {
+        if (Age === "Past") enemies.push(new Enemy("Boss1", waveN * 1500, 30));
+        if (Age === "Present") enemies.push(new Enemy("Boss2", waveN * 2500, 40));
+        boss = true;
+      }
+    }
+
+    if (
+      mouseX > width - 90 &&
+      mouseY > height - 145 &&
+      mouseX < width - 90 + 75 &&
+      mouseY < height - 145 + 35
+    )
+      waveT = 0;
+  }
+
+  if (gameState === "Pause") {
+    if (mouseY < height / 16 * 7.5 && pauseSelect === 0) {
+      gameState = "Start";
+      audioController.playMusic();
+    }
+    if (mouseY >= height / 16 * 7.5 && pauseSelect === 1) {
+      gameState = "SelectMap";
+      drawMaps();
+    }
+  }
+
+  if (gameState === "GameOver") {
+    gameState = "SelectMap";
+    drawMaps();
+  }
+}
+
+function keyPressed() {
+  ensureAudio();
+
+  if (gameState === "GameOver") {
+    gameState = "SelectMap";
+    drawMaps();
+    return false;
+  }
+
+    if (key === "m" || key === "M") {
+      if (audioController) {
+        audioController.cycleVolumeLevel();
+      }
+    }
+
+  if (key === " ") {
+    waveT = 0;
+    return false;
+  }
+  if (key === "p" || key === "P") {
+    if (gameState === "Start") {
+        gameState = "Pause";
+        audioController.pauseMusic();
+    }
+    else if (gameState === "Pause") {
+      gameState = "Start";
+      audioController.playMusic();
+    }
+  }
+
+  if (keyCode === DELETE || keyCode === BACKSPACE) {
+    if (uSelect === false) {
+      Coins += towers[lastSelect].worth;
+      playSound(deleteSound);
+      playSound(coins);
+      towers.splice(lastSelect, 1);
+      uSelect = true;
+    }
+    return false;
+  }
+
+  if (gameState === "Pause") {
+    if (keyCode === ENTER && pauseSelect === 0) {
+      gameState = "Start";
+      audioController.playMusic();
+    }
+    if (keyCode === ENTER && pauseSelect === 1) {
+      gameState = "SelectMap";
+      drawMaps();
+    }
+
+    if (keyCode === UP_ARROW) pauseSelect--;
+    else if (keyCode === DOWN_ARROW) pauseSelect++;
+  }
+
+  if (keyCode === ESCAPE && (gameState === "Pause" || gameState === "Start")) {
+    if (gameState === "Start") {
+        gameState = "Pause";
+        audioController.pauseMusic();
+    }
+    else if (gameState === "Pause") {
+      gameState = "Start";
+      audioController.playMusic();
+    }
+    return false;
+  }
+}
+
+function trade() {
+  if (uSelect === false && select === false) {
+    if (mouseX > 624 && mouseY > 560 && mouseX < 624 + 64 && mouseY < 560 + 32) {
+      Coins += towers[lastSelect].worth;
+      playSound(deleteSound);
+      playSound(coins);
+      towers.splice(lastSelect, 1);
+      uSelect = true;
+    }
+    if (mouseX > 422 && mouseY > 595 && mouseX < 422 + 48 && mouseY < 595 + 24) {
+      const upgradeCost = getUpgradeCost(towers[lastSelect], "damage");
+      if (Coins - upgradeCost >= 0) {
+        if (towers[lastSelect].damage < towers[lastSelect].maxDamage) {
+          towers[lastSelect].damage *= 2;
+          Coins -= upgradeCost;
+          towers[lastSelect].worth += upgradeCost * (2 / 3);
+          playSound(coins);
+        }
+      }
+    }
+    if (mouseX > 422 && mouseY > 625 && mouseX < 422 + 48 && mouseY < 625 + 24) {
+      const upgradeCost = getUpgradeCost(towers[lastSelect], "range");
+      if (Coins - upgradeCost >= 0) {
+        if (towers[lastSelect].range < towers[lastSelect].maxRange) {
+          towers[lastSelect].range *= 2;
+          Coins -= upgradeCost;
+          towers[lastSelect].worth += upgradeCost * (2 / 3);
+          playSound(coins);
+        }
+      }
+    }
+    if (mouseX > 422 && mouseY > 655 && mouseX < 422 + 48 && mouseY < 655 + 24) {
+      const upgradeCost = getUpgradeCost(towers[lastSelect], "rate");
+      if (Coins - upgradeCost >= 0) {
+        if (towers[lastSelect].rate < towers[lastSelect].maxRate) {
+          towers[lastSelect].rate *= 2;
+          Coins -= upgradeCost;
+          towers[lastSelect].worth += upgradeCost * (2 / 3);
+          playSound(coins);
+        }
+      }
+    }
+  }
+}
+
+function towerSelect() {
+  allPlaced = true;
+  if (towers.length > 0) allPlaced = towers[towers.length - 1].placed;
+  if (mouseButton === LEFT) {
+    if (select === true) select = false;
+    if (gameMap.atPixel(mouseX, mouseY) === "X" && allPlaced) {
+      noCursor();
+      if (select === false) towers.push(new Tower(typeX, mX, damageX, rangeX, rateX));
+      select = true;
+      uSelect = true;
+    }
+    if (gameMap.atPixel(mouseX, mouseY) === "Y" && allPlaced) {
+      noCursor();
+      if (select === false) towers.push(new Tower(typeY, mY, damageY, rangeY, rateY));
+      select = true;
+      uSelect = true;
+    }
+    if (gameMap.atPixel(mouseX, mouseY) === "Z" && allPlaced) {
+      noCursor();
+      if (select === false) towers.push(new Tower(typeZ, mZ, damageZ, rangeZ, rateZ));
+      select = true;
+      uSelect = true;
+    }
+  }
+  if (mouseButton === RIGHT && select === true) {
+    cursor();
+    playSound(deleteSound);
+    select = false;
+    towers.pop();
+    uSelect = true;
+  }
+}
+
+function GUI() {
+  textAlign(LEFT, TOP);
+  textSize(20);
+  fill(255);
+  const hudX = width - 290;
+  const lineH = 24;
+  const hudY = height - 135;
+  textLeading(lineH);
+  text(`Wave: ${waveN}\nXP: ${XP}\nHighscore: ${highScore[0]}\nEnemies: ${enemies.length}`, hudX, hudY);
+  fill(255, 255, 0);
+  text(`Coins: $${int(Coins)}`, hudX, hudY + 4 * lineH);
+  fill(0, 255, 0);
+  rect(bX - 17, bY - 3, (HP / 100) * 33, 5);
+  strokeWeight(0.5);
+  stroke(0);
+  fill(0, 0);
+  rect(bX - 17, bY - 3, 33, 5);
+  if (uSelect && !select) {
+    fill(0, 64);
+    rect(416, 544, 288, 160);
+    const panelLeft = 416;
+    const panelTop = 544;
+    textAlign(LEFT, TOP);
+    textSize(25);
+    fill(255);
+    text("Type", panelLeft + 16, panelTop + 10);
+    textSize(20);
+    text("Damage:   -", panelLeft + 64, panelTop + 54);
+    text("Range:      -", panelLeft + 64, panelTop + 84);
+    text("Rate:         -", panelLeft + 64, panelTop + 114);
+  }
+  if (towers.length > 0) {
+    if (!uSelect) towers[lastSelect].data();
+    if (select) if (towers[towers.length - 1].mouseInside()) towers[towers.length - 1].data();
+  }
+  fill(0, 255, 0);
+  rect(width - 90, height - 145, 75, 35);
+  fill(255, 0, 0);
+  rect(width - 90, height - 145, 75 - (waveT / 20) * 75, 35);
+  textAlign(CENTER, CENTER);
+  textSize(22);
+  fill(0);
+  text("Next", width - 90 + 37.5, height - 145 + 17.5);
+  if (lvUp) {
+    fill(0, 255, 255);
+    rect(width - 90, height - 55, 75, 35);
+    textAlign(CENTER, CENTER);
+    textSize(18);
+    fill(0);
+    text("Level Up", width - 90 + 37.5, height - 55 + 17.5);
+  }
+  textAlign(CENTER, CENTER);
+  textSize(15);
+  fill(255, 255, 0);
+  if (Age === "Past") {
+    text("$" + getScaledCost(mX), Xx, Xy - 24);
+    text("$" + getScaledCost(mY), Yx, Yy - 24);
+    text("$" + getScaledCost(mZ), Zx, Zy - 24);
+  }
+  if (Age === "Present") {
+    text("$" + getScaledCost(mX), Xx, Xy - 24);
+    text("$" + getScaledCost(mY), Yx, Yy - 24);
+    text("$" + getScaledCost(mZ), Zx, Zy - 24);
+  }
+  if (Age === "Future") {
+    text("$" + getScaledCost(mX), Xx, Xy - 24);
+    text("$" + getScaledCost(mY), Yx, Yy - 24);
+    text("$" + getScaledCost(mZ), Zx, Zy - 24);
+  }
+  if (Age === "Past") image(cannon, Xx, Xy);
+  if (Age === "Past") image(catapult, Yx, Yy);
+  if (Age === "Past") image(crossbow, Zx, Zy);
+
+  if (Age === "Present") image(tank, Xx, Xy);
+  if (Age === "Present") image(thrower, Yx, Yy);
+  if (Age === "Present") image(turret, Zx, Zy);
+
+  if (Age === "Future") image(laserCannon, Xx, Xy);
+  if (Age === "Future") image(railgun, Yx, Yy);
+  if (Age === "Future") image(wavegun, Zx, Zy);
+  if (audioController && volumeImgs[audioController.getVolumeLevel()]) {
+    image(volumeImgs[audioController.getVolumeLevel()], 16, 16);
+  }
+
+  if (gameMap.atPixel(mouseX, mouseY) === "X") info(typeX, damageX, rangeX, rateX, extraX);
+  if (gameMap.atPixel(mouseX, mouseY) === "Y") info(typeY, damageY, rangeY, rateY, extraY);
+  if (gameMap.atPixel(mouseX, mouseY) === "Z") info(typeZ, damageZ, rangeZ, rateZ, extraZ);
+}
+
+function info(type, Damage, Range, Rate, Extra) {
+  fill(255, 50);
+  textAlign(LEFT, TOP);
+  rect(mouseX, mouseY - 100, 100, 90);
+
+  textSize(9 + 500 / textWidth(type));
+  fill(0);
+  text(type, mouseX + 5, mouseY - 96);
+
+  textSize(12);
+  fill(0, 255, 0);
+  text(`Damage: ${Damage}`, mouseX + 5, mouseY - 75);
+  text(`Range:    ${Range}`, mouseX + 5, mouseY - 60);
+  text(`Rate:       ${Rate}`, mouseX + 5, mouseY - 45);
+
+  textSize(13);
+  fill(255, 255, 0);
+  text(Extra, mouseX + 5, mouseY - 30);
+}
+
+function wave() {
+  const dt = getDeltaTimeSafe();
+  if (boss) waveT -= dt / 3;
+  else waveT -= dt;
+
+  if (waveT < 0) {
+    waveT = 20;
+    waveN++;
+    waveL += 10;
+  }
+  if (waveType <= 0) {
+    waveType = 10;
+    enemyType = int(random(3));
+  }
+  if (waveL > 0) {
+    if (random() < (2 + waveL / 10) * dt) {
+      waveL--;
+      waveType--;
+      if (Age === "Past") {
+        if (enemyType === 0) enemies.push(new Enemy("Knight", waveN * 12, 100));
+        if (enemyType === 1) enemies.push(new Enemy("Lancer", waveN * 12 * 2, 80));
+        if (enemyType === 2) enemies.push(new Enemy("Rider", (waveN * 12) / 2, 120));
+      }
+      if (Age === "Present") {
+        if (enemyType === 0) enemies.push(new Enemy("Rocket", waveN * 55, 90));
+        if (enemyType === 1) enemies.push(new Enemy("Tank", waveN * 55 * 2, 70));
+        if (enemyType === 2) enemies.push(new Enemy("Soldier", (waveN * 55) / 2, 110));
+      }
+      if (Age === "Future") {
+        if (enemyType === 0) enemies.push(new Enemy("Robot", waveN * waveN * 10, 100));
+        if (enemyType === 1) enemies.push(new Enemy("Spaceship", waveN * waveN * 7 * 2, 60));
+        if (enemyType === 2) enemies.push(new Enemy("Ball", (waveN * waveN * 10) / 2, 120));
+      }
+    }
+  }
+}
+
+function levelUp() {
+  lvUp = false;
+  playSound(levelUpSound);
+  if (Age === "Present") {
+    Age = "Future";
+
+    typeX = "Lasercannon";
+    typeY = "Railgun";
+    typeZ = "Wavegun";
+
+    extraX = "          -";
+    extraY = "Area Damage";
+    extraZ = "Deceleration";
+
+    mX = 800;
+    mY = 1500;
+    mZ = 3000;
+
+    damageX = 3000;
+    damageY = 3000;
+    damageZ = 200;
+
+    rangeX = 650;
+    rangeY = 250;
+    rangeZ = 500;
+
+    rateX = 2;
+    rateY = 18;
+    rateZ = 70;
+  }
+  if (Age === "Past") {
+    Age = "Present";
+
+    typeX = "Tank";
+    typeY = "Flamethrower";
+    typeZ = "Turret";
+
+    extraX = "          -";
+    extraY = "Area Damage";
+    extraZ = "Deceleration";
+
+    mX = 500;
+    mY = 700;
+    mZ = 1000;
+
+    damageX = 350;
+    damageY = 250;
+    damageZ = 200;
+
+    rangeX = 700;
+    rangeY = 300;
+    rangeZ = 200;
+
+    rateX = 4;
+    rateY = 30;
+    rateZ = 15;
+  }
+  for (let x = 0; x < gameMap.w; x++) {
+    for (let y = 0; y < gameMap.h; y++) {
+      if (gameMap.at(x, y) === "W") gameMap.set(x, y, "F");
+      if (gameMap.at(x, y) === "P") gameMap.set(x, y, "W");
+    }
+  }
+}
+
+function newGame() {
+  if (gameMap) gameMap.destroy();
+
+  audioController.pauseMusic();
+  enemies = [];
+  towers = [];
+  waveL = 0;
+  waveN = 0;
+  XP = 0;
+  Coins = 350;
+  typeX = "Cannon";
+  typeY = "Catapult";
+  typeZ = "Crossbow";
+  extraX = "          -";
+  extraY = "Area Damage";
+  extraZ = "Deceleration";
+  mX = 75;
+  mY = 150;
+  mZ = 200;
+  damageX = 200;
+  damageY = 80;
+  damageZ = 40;
+  rangeX = 350;
+  rangeY = 600;
+  rangeZ = 300;
+  rateX = 5;
+  rateY = 6;
+  rateZ = 20;
+  waveT = 20;
+  waveType = 10;
+  HP = 100;
+  uSelect = true;
+  select = false;
+  allPlaced = true;
+  lvUp = false;
+  boss = false;
+  gameState = "Start";
+  Age = "Past";
+
+  ensureAudio();
+  audioController.playMusic();
+  if (audioController.musicElement) {
+    audioController.musicElement.currentTime = 0;
+  } 
+
+
+  imageMode(CENTER);
+  gameMap = new GameMap(mapName);
+  gameMap.mode(CENTER);
+  loadHighScore();
+  oldScore = int(highScore[0]);
+  pauseSelect = 0;
+
+  for (let x = 0; x < gameMap.w; x++) {
+    for (let y = 0; y < gameMap.h; y++) {
+      if (gameMap.at(x, y) === "S") {
+        gameMap.set(x, y, "P");
+        startX = gameMap.centerXOfTile(x);
+        startY = gameMap.centerYOfTile(y);
+      }
+      if (gameMap.at(x, y) === "B") {
+        bX = gameMap.centerXOfTile(x);
+        bY = gameMap.centerYOfTile(y);
+      }
+      if (gameMap.at(x, y) === "X") {
+        Xx = gameMap.centerXOfTile(x);
+        Xy = gameMap.centerYOfTile(y);
+      }
+      if (gameMap.at(x, y) === "Y") {
+        Yx = gameMap.centerXOfTile(x);
+        Yy = gameMap.centerYOfTile(y);
+      }
+      if (gameMap.at(x, y) === "Z") {
+        Zx = gameMap.centerXOfTile(x);
+        Zy = gameMap.centerYOfTile(y);
+      }
+    }
+  }
+}
+
+function drawMaps() {
+  if (map1) map1.destroy();
+  if (map2) map2.destroy();
+  if (map3) map3.destroy();
+  if (map4) map4.destroy();
+  if (map5) map5.destroy();
+  if (map6) map6.destroy();
+
+  background(0);
+  fill(35, 90, 0);
+  rect(width / 20, height / 4, width / 4, height / 4);
+  rect(width / 20 * 7.5, height / 4, width / 4, height / 4);
+  rect(width / 20 * 14, height / 4, width / 4, height / 4);
+  rect(width / 20, height / 2 + height / 20, width / 4, height / 4);
+  rect(width / 20 * 7.5, height / 2 + height / 20, width / 4, height / 4);
+  rect(width / 20 * 14, height / 2 + height / 20, width / 4, height / 4);
+  map1 = new GameMap("towerDefense1.map");
+  map2 = new GameMap("towerDefense2.map");
+  map3 = new GameMap("towerDefense3.map");
+  map4 = new GameMap("towerDefense4.map");
+  map5 = new GameMap("towerDefense5.map");
+  map6 = new GameMap("towerDefense6.map");
+  map1.draw(width / 20, height / 4);
+  map2.draw(width / 20 * 7.5, height / 4);
+  map3.draw(width / 20 * 14, height / 4);
+  map4.draw(width / 20, height / 2 + height / 20);
+  map5.draw(width / 20 * 7.5, height / 2 + height / 20);
+  map6.draw(width / 20 * 14, height / 2 + height / 20);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  fill(200);
+  text("'Space' = Next Wave          'P' = Pause          'M' = Volume", width / 2, height / 11 * 10);
+}
+
+function setAudioEnabled(enabled) {
+  if (audioController) {
+      audioController.setMute(!enabled);
+      audioController.ensureContext();
+  }
+}
+
+function playSound(sound) {
+  if (audioController) audioController.play(sound);
+}
+
+function ensureAudio() {
+  if (audioController) audioController.ensureContext();
+}
+
+function loadHighScore() {
+  let stored = null;
+  try {
+    stored = localStorage.getItem(HIGH_SCORE_KEY);
+  } catch (err) {
+    stored = null;
+  }
+
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed && !isNaN(parseInt(parsed.score, 10))) {
+        highScore = [String(parseInt(parsed.score, 10))];
+        oldScore = int(highScore[0]);
+        return;
+      }
+    } catch (err) {}
+  }
+
+  try {
+    const legacy = localStorage.getItem("towerDefenseHighScore");
+    if (legacy !== null && !isNaN(parseInt(legacy, 10))) {
+      highScore = [String(parseInt(legacy, 10))];
+      saveHighScore(int(highScore[0]));
+      oldScore = int(highScore[0]);
+      return;
+    }
+  } catch (err) {}
+
+  if (defaultHighScore && defaultHighScore.length > 0) {
+    highScore = [String(defaultHighScore[0]).trim()];
+  } else {
+    highScore = ["0"];
+  }
+  oldScore = int(highScore[0]);
+}
+
+function saveHighScore(score) {
+  highScore = [String(score)];
+  try {
+    const payload = {
+      score: parseInt(score, 10),
+      date: new Date().toISOString(),
+      map: mapName
+    };
+    localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(payload));
+  } catch (err) {}
+}
+
+function getDeltaTimeSafe() {
+  if (ignoreNextDelta) {
+    ignoreNextDelta = false;
+    return 1 / 60;
+  }
+  const dtMs = deltaTime;
+  if (!dtMs || dtMs <= 0 || !isFinite(dtMs)) return 1 / 60;
+  const dt = dtMs / 1000;
+  return min(dt, 1 / 30);
+}
+
+function getCostScale() {
+  return 1;
+}
+
+function getScaledCost(baseCost) {
+  return int(ceil(baseCost * getCostScale()));
+}
+
+function getUpgradeCost(tower, stat) {
+  let maxVal = 1;
+  if (stat === "damage") maxVal = tower.maxDamage;
+  else if (stat === "range") maxVal = tower.maxRange;
+  else if (stat === "rate") maxVal = tower.maxRate;
+
+  const currentVal = tower[stat];
+  const baseCost = (currentVal * 2 / maxVal) * tower.cost;
+  return getScaledCost(baseCost);
+}
