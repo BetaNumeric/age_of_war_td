@@ -40,6 +40,7 @@ let XP = 0;
 let oldScore = 0;
 let Coins = 0;
 let pauseSelect = 0;
+let pauseHover = -1;
 let mX = 0;
 let mY = 0;
 let mZ = 0;
@@ -335,20 +336,35 @@ function draw() {
 
   if (gameState === "Pause") {
     cursor();
-    textAlign(LEFT, TOP);
-    textSize(20);
-    fill(255, 255, 0);
+    textAlign(CENTER, CENTER);
     textSize(75);
     fill(255);
-    textAlign(CENTER, CENTER);
     text("Pause", width / 2, height / 16 * 6);
-    textSize(20);
-    fill(128);
-    if (pauseSelect === 0) fill(255);
-    text("Continue", width / 2, height / 16 * 7);
-    fill(128);
-    if (pauseSelect === 1) fill(255);
-    text("Menu", width / 2, height / 16 * 8);
+
+    // Button layout (flat, neutral, lower so it doesn't overlap title)
+    const pauseBtnW = 300;
+    const pauseBtnH = 52;
+    const pauseBtnX = width / 2 - pauseBtnW / 2;
+    const firstBtnY = height / 16 * 8.5 - pauseBtnH / 2;
+    const btnGap = 18;
+
+    // draw two simple flat, colorless buttons (no rounded corners)
+    for (let i = 0; i < 2; i++) {
+      const bx = pauseBtnX;
+      const by = firstBtnY + i * (pauseBtnH + btnGap);
+
+      noStroke();
+      if (pauseHover === i) fill(200); // only change color on hover
+      else fill(230);
+      rect(bx, by, pauseBtnW, pauseBtnH);
+
+      // button text
+      textSize(22);
+      fill(30);
+      const label = i === 0 ? "Continue" : "Menu";
+      text(label, bx + pauseBtnW / 2, by + pauseBtnH / 2);
+    }
+
     if (pauseSelect > 1) pauseSelect = 0;
     if (pauseSelect < 0) pauseSelect = 1;
     audioController.pauseMusic();
@@ -372,6 +388,18 @@ function draw() {
   }
 }
 
+// Helper: return the rectangle for pause buttons (index 0 = Continue, 1 = Menu)
+function getPauseButtonRect(index) {
+  const pauseBtnW = 300;
+  const pauseBtnH = 52;
+  const pauseBtnX = width / 2 - pauseBtnW / 2;
+  const firstBtnY = height / 16 * 8.5 - pauseBtnH / 2;
+  const btnGap = 18;
+  const bx = pauseBtnX;
+  const by = firstBtnY + index * (pauseBtnH + btnGap);
+  return { x: bx, y: by, w: pauseBtnW, h: pauseBtnH };
+}
+
 function syncCursorVisibility() {
   if (gameState === "Start" && select) noCursor();
   else cursor();
@@ -379,8 +407,11 @@ function syncCursorVisibility() {
 
 function mouseMoved() {
   if (gameState === "Pause") {
-    if (mouseY < height / 16 * 7.5) pauseSelect = 0;
-    if (mouseY >= height / 16 * 7.5) pauseSelect = 1;
+    const r0 = getPauseButtonRect(0);
+    const r1 = getPauseButtonRect(1);
+    if (mouseX >= r0.x && mouseX <= r0.x + r0.w && mouseY >= r0.y && mouseY <= r0.y + r0.h) pauseHover = 0;
+    else if (mouseX >= r1.x && mouseX <= r1.x + r1.w && mouseY >= r1.y && mouseY <= r1.y + r1.h) pauseHover = 1;
+    else pauseHover = -1;
   }
 }
 
@@ -493,11 +524,13 @@ function handleClick() {
   }
 
   if (gameState === "Pause") {
-    if (mouseY < height / 16 * 7.5 && pauseSelect === 0) {
+    const r0 = getPauseButtonRect(0);
+    const r1 = getPauseButtonRect(1);
+    if (mouseX >= r0.x && mouseX <= r0.x + r0.w && mouseY >= r0.y && mouseY <= r0.y + r0.h) {
       gameState = "Start";
       audioController.playMusic();
     }
-    if (mouseY >= height / 16 * 7.5 && pauseSelect === 1) {
+    if (mouseX >= r1.x && mouseX <= r1.x + r1.w && mouseY >= r1.y && mouseY <= r1.y + r1.h) {
       gameState = "SelectMap";
       drawMaps();
     }
