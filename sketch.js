@@ -9,9 +9,12 @@
 ];
 
 const TILE_LETTERS = ["B", "C", "F", "G", "M", "P", "R", "S", "T", "W", "X", "Y", "Z"];
+const BASE_CANVAS_WIDTH = 1024;
+const BASE_CANVAS_HEIGHT = 704;
 
 let mapData = {};
 let tileImages = {};
+let mainCanvas = null;
 
 let gameMap, map1, map2, map3, map4, map5, map6;
 let enemies = [];
@@ -163,7 +166,10 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(1024, 704);
+  pixelDensity(1);
+  mainCanvas = createCanvas(BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
+  noSmooth();
+  applyCanvasScale();
   background(0);
   textAlign(CENTER, CENTER);
   textSize(30);
@@ -209,6 +215,24 @@ function setup() {
     }
     ignoreNextDelta = true;
   });
+}
+
+function applyCanvasScale() {
+  if (!mainCanvas || !mainCanvas.elt) return;
+
+  const fitScale = min(windowWidth / BASE_CANVAS_WIDTH, windowHeight / BASE_CANVAS_HEIGHT);
+  const safeScale = max(fitScale, 0.25);
+  // Keep integer upscaling for crisp pixel art; allow fractional downscaling on small screens.
+  const renderScale = safeScale >= 1 ? floor(safeScale) : safeScale;
+  const scaledWidth = max(1, floor(BASE_CANVAS_WIDTH * renderScale));
+  const scaledHeight = max(1, floor(BASE_CANVAS_HEIGHT * renderScale));
+
+  mainCanvas.elt.style.width = `${scaledWidth}px`;
+  mainCanvas.elt.style.height = `${scaledHeight}px`;
+}
+
+function windowResized() {
+  applyCanvasScale();
 }
 
 function draw() {
