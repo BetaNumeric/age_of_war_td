@@ -79,7 +79,7 @@ let defaultHighScore = ["0"];
 const HIGH_SCORE_KEY = "towerDefenseHighScore_v1";
 let autoPaused = false;
 let ignoreNextDelta = false;
-let renderMode = RENDER_MODE_CRISP;
+let renderMode = RENDER_MODE_SMOOTH;
 
 let knight, rider, lancer, boss1;
 let soldier, rocket, enemyTank, boss2;
@@ -499,7 +499,7 @@ function isPointInRect(px, py, rectInfo) {
 
 function getSettingsButtonRect() {
   const size = 32;
-  const menuMargin = 10;
+  const menuMargin = 16;
   const isGameplay = gameState === "Start";
   const x = isGameplay ? width - size : width - size - menuMargin;
   const y = isGameplay ? 0 : menuMargin;
@@ -509,8 +509,10 @@ function getSettingsButtonRect() {
 function getRenderSettingsPanelRect() {
   const w = 64;
   const h = 36;
-  const x = width - w - 32;
-  const y = 32;
+  const menuMargin = 16;
+  const isGameplay = gameState === "Start";
+  const x = isGameplay ? width - w - 32 : width - w - 32 - menuMargin;
+  const y = isGameplay ? 32 : 32 + menuMargin;
   return { x, y, w, h };
 }
 
@@ -558,6 +560,13 @@ function drawRenderSettingsPanel() {
 function drawSettingsUI() {
   drawSettingsButton();
   if (renderSettingsOpen) drawRenderSettingsPanel();
+}
+
+function closeRenderSettingsMenu() {
+  renderSettingsOpen = false;
+  if (gameState === "SelectMap") {
+    drawMaps();
+  }
 }
 
 function mouseMoved() {
@@ -608,11 +617,11 @@ function handleClick() {
       const panel = getRenderSettingsPanelRect();
       if (isPointInRect(mouseX, mouseY, panel)) {
         toggleRenderMode();
-        renderSettingsOpen = false;
+        closeRenderSettingsMenu();
         return;
       }
 
-      renderSettingsOpen = false;
+      closeRenderSettingsMenu();
     }
   }
 
