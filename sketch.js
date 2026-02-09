@@ -11,6 +11,9 @@
 const TILE_LETTERS = ["B", "C", "F", "G", "M", "P", "R", "S", "T", "W", "X", "Y", "Z"];
 const BASE_CANVAS_WIDTH = 1024;
 const BASE_CANVAS_HEIGHT = 704;
+const RENDER_MODE_KEY = "towerDefenseRenderMode_v1";
+const RENDER_MODE_CRISP = "crisp";
+const RENDER_MODE_SMOOTH = "smooth";
 
 let mapData = {};
 let tileImages = {};
@@ -76,6 +79,7 @@ let defaultHighScore = ["0"];
 const HIGH_SCORE_KEY = "towerDefenseHighScore_v1";
 let autoPaused = false;
 let ignoreNextDelta = false;
+let renderMode = RENDER_MODE_CRISP;
 
 let knight, rider, lancer, boss1;
 let soldier, rocket, enemyTank, boss2;
@@ -85,6 +89,9 @@ let cannon, cannon2, catapult, catapult2, crossbow, crossbow2;
 let tank, tank2, turret, turretB, turretT, turretT2, thrower, thrower2;
 let laserCannon, laserCannon2, wavegun, wavegunB, wavegunT, wavegunT2, railgun, railgun2;
 let volumeImgs = [null, null, null, null];
+let settingsIconGameplay = null;
+let settingsIconMenu = null;
+let renderSettingsOpen = false;
 
 let audioController;
 let music = "music";
@@ -144,6 +151,8 @@ function preload() {
   volumeImgs[1] = loadImage("data/images/volume1.png");
   volumeImgs[2] = loadImage("data/images/volume2.png");
   volumeImgs[3] = loadImage("data/images/volume3.png");
+  settingsIconGameplay = loadImage("data/images/settings.png");
+  settingsIconMenu = loadImage("data/images/settings_w.png");
 
   audioController.loadMusic("data/sounds/music.mp3");
   audioController.loadSFX(cannonShot, "data/sounds/cannonShot.mp3");
@@ -166,10 +175,10 @@ function preload() {
 }
 
 function setup() {
-  pixelDensity(1);
+  loadRenderMode();
+  pixelDensity(getTargetPixelDensity());
   mainCanvas = createCanvas(BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
-  noSmooth();
-  applyCanvasScale();
+  applyRenderMode();
   background(0);
   textAlign(CENTER, CENTER);
   textSize(30);
@@ -221,11 +230,12 @@ function applyCanvasScale() {
   if (!mainCanvas || !mainCanvas.elt) return;
 
   const fitScale = min(windowWidth / BASE_CANVAS_WIDTH, windowHeight / BASE_CANVAS_HEIGHT);
-  const safeScale = max(fitScale, 0.25);
-  // Keep integer upscaling for crisp pixel art; allow fractional downscaling on small screens.
-  const renderScale = safeScale >= 1 ? floor(safeScale) : safeScale;
-  const scaledWidth = max(1, floor(BASE_CANVAS_WIDTH * renderScale));
-  const scaledHeight = max(1, floor(BASE_CANVAS_HEIGHT * renderScale));
+  let renderScale = max(fitScale, 0.1);
+  if (renderMode === RENDER_MODE_CRISP && fitScale >= 1) {
+    renderScale = max(1, floor(fitScale));
+  }
+  const scaledWidth = max(1, renderMode === RENDER_MODE_CRISP ? floor(BASE_CANVAS_WIDTH * renderScale) : BASE_CANVAS_WIDTH * renderScale);
+  const scaledHeight = max(1, renderMode === RENDER_MODE_CRISP ? floor(BASE_CANVAS_HEIGHT * renderScale) : BASE_CANVAS_HEIGHT * renderScale);
 
   mainCanvas.elt.style.width = `${scaledWidth}px`;
   mainCanvas.elt.style.height = `${scaledHeight}px`;
@@ -450,6 +460,8 @@ function draw() {
 
     audioController.pauseMusic();
   }
+
+  if (gameState !== "loading") drawSettingsUI();
 }
 
 // Helper: return the rectangle for pause buttons (index 0 = Continue, 1 = Menu)
@@ -479,6 +491,73 @@ function getGameOverButtonRect(index) {
 function syncCursorVisibility() {
   if (gameState === "Start" && select) noCursor();
   else cursor();
+}
+
+function isPointInRect(px, py, rectInfo) {
+  return px >= rectInfo.x && px <= rectInfo.x + rectInfo.w && py >= rectInfo.y && py <= rectInfo.y + rectInfo.h;
+}
+
+function getSettingsButtonRect() {
+  const size = 32;
+  const menuMargin = 10;
+  const isGameplay = gameState === "Start";
+  const x = isGameplay ? width - size : width - size - menuMargin;
+  const y = isGameplay ? 0 : menuMargin;
+  return { x, y, w: size, h: size };
+}
+
+function getRenderSettingsPanelRect() {
+  const w = 64;
+  const h = 36;
+  const x = width - w - 32;
+  const y = 32;
+  return { x, y, w, h };
+}
+
+function getRenderOptionRect() {
+  const panel = getRenderSettingsPanelRect();
+  const pad = 4;
+  const optionH = panel.h - pad * 2;
+  return {
+    x: panel.x + pad,
+    y: panel.y + pad,
+    w: panel.w - pad * 2,
+    h: optionH
+  };
+}
+
+function drawSettingsButton() {
+  const r = getSettingsButtonRect();
+  const icon = gameState === "Start" ? settingsIconGameplay : settingsIconMenu;
+  if (icon) {
+    image(icon, r.x + r.w / 2, r.y + r.h / 2, 28, 28);
+    return;
+  }
+  noStroke();
+  fill(0);
+  rect(r.x + 8, r.y + 8, 16, 16);
+}
+
+function drawRenderSettingsPanel() {
+  const panel = getRenderSettingsPanelRect();
+  const modeButton = getRenderOptionRect();
+  noStroke();
+  fill(0);
+  rect(panel.x, panel.y, panel.w, panel.h);
+
+  fill(255);
+  rect(modeButton.x, modeButton.y, modeButton.w, modeButton.h);
+
+  textAlign(CENTER, CENTER);
+  textSize(14);
+  fill(0);
+  if (renderMode === RENDER_MODE_CRISP) text("Sharp", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
+  else text("Smooth", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
+}
+
+function drawSettingsUI() {
+  drawSettingsButton();
+  if (renderSettingsOpen) drawRenderSettingsPanel();
 }
 
 function mouseMoved() {
@@ -517,6 +596,34 @@ function mousePressed() {
 
 function handleClick() {
   ensureAudio();
+
+  if (gameState !== "loading") {
+    const settingsButton = getSettingsButtonRect();
+    if (isPointInRect(mouseX, mouseY, settingsButton)) {
+      renderSettingsOpen = !renderSettingsOpen;
+      return;
+    }
+
+    if (renderSettingsOpen) {
+      const panel = getRenderSettingsPanelRect();
+      if (isPointInRect(mouseX, mouseY, panel)) {
+        toggleRenderMode();
+        renderSettingsOpen = false;
+        return;
+      }
+
+      renderSettingsOpen = false;
+    }
+  }
+
+  if (gameState === "Start") {
+    if (mouseX < 32 && mouseY < 32) {
+      if (audioController) {
+        audioController.cycleVolumeLevel();
+      }
+      return;
+    }
+  }
 
   if (gameState === "SelectMap") {
     if (mouseX > width / 20 && mouseY > height / 4 && mouseX < width / 20 + width / 4 && mouseY < height / 4 + height / 4) {
@@ -571,12 +678,6 @@ function handleClick() {
   }
 
   if (gameState === "Start") {
-    if (mouseX < 32 && mouseY < 32) {
-      if (audioController) {
-        audioController.cycleVolumeLevel();
-      }
-    }
-
     if (mouseY < 544) uSelect = true;
 
     if (towers.length > 0)
@@ -659,6 +760,11 @@ function keyPressed() {
       if (audioController) {
         audioController.cycleVolumeLevel();
       }
+    }
+
+  if (key === "n" || key === "N") {
+    toggleRenderMode();
+    return false;
     }
 
   if (key === " ") {
@@ -1114,7 +1220,7 @@ function drawMaps() {
   textAlign(CENTER, CENTER);
   textSize(20);
   fill(200);
-  text("'Space' = Next Wave          'P' = Pause          'M' = Volume", width / 2, height / 11 * 10);
+  text("'Space' = Next Wave     'P' = Pause     'M' = Volume     'N' = Render Mode", width / 2, height / 11 * 10);
 }
 
 function setAudioEnabled(enabled) {
@@ -1167,6 +1273,74 @@ function loadHighScore() {
     highScore = ["0"];
   }
   oldScore = int(highScore[0]);
+}
+
+function loadRenderMode() {
+  let stored = null;
+  try {
+    stored = localStorage.getItem(RENDER_MODE_KEY);
+  } catch (err) {
+    stored = null;
+  }
+  if (stored === RENDER_MODE_SMOOTH || stored === RENDER_MODE_CRISP) {
+    renderMode = stored;
+  } else {
+    renderMode = RENDER_MODE_CRISP;
+  }
+}
+
+function saveRenderMode() {
+  try {
+    localStorage.setItem(RENDER_MODE_KEY, renderMode);
+  } catch (err) {}
+}
+
+function getTargetPixelDensity() {
+  if (renderMode === RENDER_MODE_SMOOTH) return min(2, window.devicePixelRatio || 1);
+  return 1;
+}
+
+function applyRenderMode() {
+  if (!mainCanvas || !mainCanvas.elt) return;
+
+  if (renderMode === RENDER_MODE_SMOOTH) {
+    smooth();
+    if (drawingContext) drawingContext.imageSmoothingEnabled = true;
+    mainCanvas.elt.style.imageRendering = "auto";
+  } else {
+    noSmooth();
+    if (drawingContext) drawingContext.imageSmoothingEnabled = false;
+    mainCanvas.elt.style.imageRendering = "pixelated";
+  }
+  applyCanvasScale();
+}
+
+function setRenderMode(mode) {
+  const nextMode = mode === RENDER_MODE_SMOOTH ? RENDER_MODE_SMOOTH : RENDER_MODE_CRISP;
+  renderMode = nextMode;
+  saveRenderMode();
+
+  pixelDensity(getTargetPixelDensity());
+  if (mainCanvas) {
+    resizeCanvas(BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
+    applyRenderMode();
+    imageMode(CENTER);
+  }
+
+  if (gameState === "Pause") {
+    pauseOverlayDrawn = false;
+  }
+  if (gameState === "GameOver") {
+    gameOverOverlayDrawn = false;
+  }
+  if (gameState === "SelectMap") {
+    drawMaps();
+  }
+}
+
+function toggleRenderMode() {
+  if (renderMode === RENDER_MODE_CRISP) setRenderMode(RENDER_MODE_SMOOTH);
+  else setRenderMode(RENDER_MODE_CRISP);
 }
 
 function saveHighScore(score) {

@@ -22,6 +22,7 @@ s
 - `Space`: start next wave immediately
 - `P` or `Esc`: pause/resume
 - `M`: cycle volume level
+- `N`: toggle render mode (`Sharp` / `Smooth`)
 - `Delete` / `Backspace`: sell selected tower
 
 ## Run Locally
@@ -35,4 +36,3 @@ python -m http.server 8000
 Open: `http://localhost:8000`
 
 No build step is required.
-
