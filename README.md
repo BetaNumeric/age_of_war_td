@@ -36,8 +36,8 @@ python -m http.server 8000
 Open: `http://localhost:8000`
 
 
-Music: “Glorious Morning” by Waterflame  
+## Credit
+
+Music: “Glorious Morning” by Waterflame
 CC BY-NC-SA 3.0  
 Original: https://www.newgrounds.com/audio/listen/91476
-
-No build step is required.
