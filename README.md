@@ -4,7 +4,7 @@
 
 A browser-based tower defense game inspired by **Age of War**, built with p5.js.  
 Pick a map, place towers, survive waves, and evolve from the **Past** to the **Future**.
-s
+
 ## Features
 
 - 6 playable maps
@@ -34,5 +34,10 @@ python -m http.server 8000
 ```
 
 Open: `http://localhost:8000`
+
+
+Music: “Glorious Morning” by Waterflame  
+CC BY-NC-SA 3.0  
+Original: https://www.newgrounds.com/audio/listen/91476
 
 No build step is required.
