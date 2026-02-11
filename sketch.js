@@ -26,7 +26,6 @@ let uSelect = true;
 let select = false;
 let allPlaced = true;
 let lvUp = false;
-let boss = false;
 let startX = 0;
 let startY = 0;
 let bX = 0;
@@ -322,7 +321,7 @@ function draw() {
       mouseX < width / 20 * 14 + width / 4 &&
       mouseY < height / 2 + height / 20 + height / 4
     )
-      stroke(255);
+    stroke(255);
     rect(width / 20 * 14, height / 2 + height / 20, width / 4, height / 4);
     stroke(0);
   }
@@ -367,8 +366,7 @@ function draw() {
       }
     }
 
-    if (Age === "Past" && XP >= 150) lvUp = true;
-    if (Age === "Present" && XP >= 300) lvUp = true;
+    lvUp = isLevelUpAvailable();
 
     if (Age === "Past") image(castle, bX, bY);
     if (Age === "Present") image(military, bX, bY);
@@ -699,12 +697,8 @@ function handleClick() {
     trade();
     towerSelect();
 
-    if (lvUp && mouseX > width - 90 && mouseY > height - 60 && mouseX < width - 90 + 75 && mouseY < height - 60 + 45) {
-      if (boss === false) {
-        if (Age === "Past") enemies.push(new Enemy("Boss1", waveN * 1500, 30));
-        if (Age === "Present") enemies.push(new Enemy("Boss2", waveN * 2500, 40));
-        boss = true;
-      }
+    if (mouseX > width - 90 && mouseY > height - 60 && mouseX < width - 90 + 75 && mouseY < height - 60 + 45) {
+      if (isLevelUpAvailable()) levelUp();
     }
 
     if (
@@ -918,12 +912,11 @@ function GUI() {
   text(`Wave: ${waveN}\nXP: ${XP}\nHighscore: ${highScore[0]}\nEnemies: ${enemies.length}`, hudX, hudY);
   fill(255, 255, 0);
   text(`Coins: $${int(Coins)}`, hudX, hudY + 4 * lineH);
+  noStroke();
+  fill(0);
+  rect(bX - 17, bY - 3, 33, 5);
   fill(0, 255, 0);
   rect(bX - 17, bY - 3, (HP / 100) * 33, 5);
-  strokeWeight(0.5);
-  stroke(0);
-  fill(0, 0);
-  rect(bX - 17, bY - 3, 33, 5);
   if (uSelect && !select) {
     fill(0, 64);
     rect(416, 544, 288, 160);
@@ -950,14 +943,31 @@ function GUI() {
   textSize(22);
   fill(0);
   text("Next", width - 90 + 37.5, height - 145 + 17.5);
-  if (lvUp) {
+  const levelUpX = width - 90;
+  const levelUpY = height - 55;
+  const levelUpW = 75;
+  const levelUpH = 35;
+  const levelUpXPRequired = getLevelUpXPRequired();
+  const levelUpProgress = levelUpXPRequired === null ? 1 : constrain(XP / levelUpXPRequired, 0, 1);
+
+  fill(0, 127, 127);
+  rect(levelUpX, levelUpY, levelUpW, levelUpH);
+  if (levelUpXPRequired !== null) {
     fill(0, 255, 255);
-    rect(width - 90, height - 55, 75, 35);
-    textAlign(CENTER, CENTER);
-    textSize(18);
-    fill(0);
-    text("Level Up", width - 90 + 37.5, height - 55 + 17.5);
+    rect(levelUpX, levelUpY, levelUpProgress * levelUpW, levelUpH);
   }
+  if (
+    mouseX > levelUpX &&
+    mouseY > levelUpY &&
+    mouseX < levelUpX + levelUpW &&
+    mouseY < levelUpY + levelUpH
+  ) {
+    drawLevelUpTooltip(levelUpXPRequired);
+  }
+  textAlign(CENTER, CENTER);
+  fill(0);
+  textSize(16);
+  text("Level Up", levelUpX + levelUpW / 2, levelUpY + levelUpH / 2);
   textAlign(CENTER, CENTER);
   textSize(15);
   fill(255, 255, 0);
@@ -1016,10 +1026,75 @@ function info(type, Damage, Range, Rate, Extra) {
   text(Extra, mouseX + 5, mouseY - 30);
 }
 
+function drawLevelUpTooltip(levelUpXPRequired) {
+  const margin = 6;
+  const tooltipText =
+    levelUpXPRequired === null
+      ? "Max age reached"
+      : `XP: ${int(min(XP, levelUpXPRequired))}/${levelUpXPRequired}`;
+
+  textSize(12);
+  const tooltipW = max(76, int(textWidth(tooltipText) + 12));
+  const tooltipH = 24;
+  let tipX = mouseX + 10;
+  let tipY = mouseY - tooltipH - 10;
+
+  tipX = constrain(tipX, margin, width - tooltipW - margin);
+  tipY = constrain(tipY, margin, height - tooltipH - margin);
+
+  fill(255, 50);
+  textAlign(LEFT, TOP);
+  rect(tipX, tipY, tooltipW, tooltipH);
+
+  if (levelUpXPRequired === null) fill(120);
+  else fill(255, 255, 0);
+  text(tooltipText, tipX + 6, tipY + 6);
+}
+
+function getLevelUpXPRequired() {
+  if (Age === "Past") return 200;
+  if (Age === "Present") return 600;
+  return null;
+}
+
+function isLevelUpAvailable() {
+  const requiredXP = getLevelUpXPRequired();
+  return requiredXP !== null && XP >= requiredXP;
+}
+
+function getEnemyHP(type, wave) {
+  const futureScale = pow(wave, 1.3);
+
+  if (type === "Knight") return int(12 * wave);
+  if (type === "Lancer") return int(20 * wave);
+  if (type === "Rider") return int(8 * wave);
+
+  if (type === "Rocket") return int(40 * wave);
+  if (type === "Tank") return int(70 * wave);
+  if (type === "Soldier") return int(30 * wave);
+
+  if (type === "Robot") return int(30 * futureScale);
+  if (type === "Spaceship") return int(42 * futureScale);
+  if (type === "Ball") return int(24 * futureScale);
+
+  return 1;
+}
+
+function getEnemyBounty(enemy) {
+  if (enemy.type === "Boss1") return 700;
+  if (enemy.type === "Boss2") return 2200;
+
+  let config = { base: 1, k: 0.33, cap: 12 };
+  if (enemy.spawnAge === "Present") config = { base: 7, k: 0.45, cap: 42 };
+  if (enemy.spawnAge === "Future") config = { base: 14, k: 0.55, cap: 75 };
+
+  const payout = config.base + sqrt(enemy.maxHP) * config.k + enemy.maxV / 90;
+  return int(min(config.cap, payout));
+}
+
 function wave() {
   const dt = getDeltaTimeSafe();
-  if (boss) waveT -= dt / 3;
-  else waveT -= dt;
+  waveT -= dt;
 
   if (waveT < 0) {
     waveT = 20;
@@ -1035,19 +1110,19 @@ function wave() {
       waveL--;
       waveType--;
       if (Age === "Past") {
-        if (enemyType === 0) enemies.push(new Enemy("Knight", waveN * 12, 100));
-        if (enemyType === 1) enemies.push(new Enemy("Lancer", waveN * 12 * 2, 80));
-        if (enemyType === 2) enemies.push(new Enemy("Rider", (waveN * 12) / 2, 120));
+        if (enemyType === 0) enemies.push(new Enemy("Knight", getEnemyHP("Knight", waveN), 100));
+        if (enemyType === 1) enemies.push(new Enemy("Lancer", getEnemyHP("Lancer", waveN), 80));
+        if (enemyType === 2) enemies.push(new Enemy("Rider", getEnemyHP("Rider", waveN), 120));
       }
       if (Age === "Present") {
-        if (enemyType === 0) enemies.push(new Enemy("Rocket", waveN * 55, 90));
-        if (enemyType === 1) enemies.push(new Enemy("Tank", waveN * 55 * 2, 70));
-        if (enemyType === 2) enemies.push(new Enemy("Soldier", (waveN * 55) / 2, 110));
+        if (enemyType === 0) enemies.push(new Enemy("Rocket", getEnemyHP("Rocket", waveN), 90));
+        if (enemyType === 1) enemies.push(new Enemy("Tank", getEnemyHP("Tank", waveN), 70));
+        if (enemyType === 2) enemies.push(new Enemy("Soldier", getEnemyHP("Soldier", waveN), 110));
       }
       if (Age === "Future") {
-        if (enemyType === 0) enemies.push(new Enemy("Robot", waveN * waveN * 10, 100));
-        if (enemyType === 1) enemies.push(new Enemy("Spaceship", waveN * waveN * 7 * 2, 60));
-        if (enemyType === 2) enemies.push(new Enemy("Ball", (waveN * waveN * 10) / 2, 120));
+        if (enemyType === 0) enemies.push(new Enemy("Robot", getEnemyHP("Robot", waveN), 100));
+        if (enemyType === 1) enemies.push(new Enemy("Spaceship", getEnemyHP("Spaceship", waveN), 60));
+        if (enemyType === 2) enemies.push(new Enemy("Ball", getEnemyHP("Ball", waveN), 120));
       }
     }
   }
@@ -1153,7 +1228,6 @@ function newGame() {
   select = false;
   allPlaced = true;
   lvUp = false;
-  boss = false;
   gameState = "Start";
   Age = "Past";
 

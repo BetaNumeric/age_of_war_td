@@ -241,20 +241,12 @@
         }
       }
       if (enemies[i].HP < 0) {
-        if (Age === "Past") this.m = 1 + sqrt(enemies[i].maxHP) * 0.4;
-        if (Age === "Present") this.m = 20 + sqrt(enemies[i].maxHP) * 0.4;
-        if (Age === "Future") this.m = 60 + sqrt(enemies[i].maxHP) * 0.4;
-        if (enemies[i].type === "Boss1") this.m = 1000;
-        if (enemies[i].type === "Boss2") this.m = 5000;
+        this.m = getEnemyBounty(enemies[i]);
         this.mX = enemies[i].x + enemies[i].rX;
         this.mY = enemies[i].y + enemies[i].rY;
         Coins += this.m;
         this.mC = 255;
 
-        if (enemies[i].type === "Boss1" || enemies[i].type === "Boss2") {
-          boss = false;
-          levelUp();
-        }
         enemies.splice(i, 1);
         XP++;
       }

@@ -11,6 +11,7 @@
     this.Vx = 0;
     this.Vy = 0;
     this.type = tmpType;
+    this.spawnAge = typeof Age === "string" ? Age : "Past";
 
     if (this.type === "Boss1" || this.type === "Boss2") {
       this.rX = 0;
