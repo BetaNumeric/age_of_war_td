@@ -3,7 +3,22 @@
     this.projectiles = [];
     this.cost = tempCost;
     this.baseCost = tempCost;
-    this.worth = (this.cost * 2) / 3;
+    const resaleCfg =
+      typeof BALANCE !== "undefined" && BALANCE.towerResale
+        ? BALANCE.towerResale
+        : {
+            initialFactor: 0.9,
+            minFactor: 2 / 3,
+            wearPerShot: 0.00002,
+            wearPerDamage: 0.0000000005
+          };
+    this.invested = tempCost;
+    this.initialResaleFactor = resaleCfg.initialFactor;
+    this.minResaleFactor = resaleCfg.minFactor;
+    this.resaleWearPerShot = resaleCfg.wearPerShot;
+    this.resaleWearPerDamage = resaleCfg.wearPerDamage;
+    this.resaleFactor = this.initialResaleFactor;
+    this.worth = this.invested * this.resaleFactor;
     this.x = 0;
     this.y = 0;
     this.d = 30;
@@ -117,7 +132,9 @@
         } else {
           Coins -= costNow;
           this.cost = costNow;
-          this.worth = (this.cost * 2) / 3;
+          this.invested = this.cost;
+          this.resaleFactor = this.initialResaleFactor;
+          this.recalculateWorth();
           playSound(place);
           playSound(coins);
           this.placed = true;
@@ -173,6 +190,7 @@
         if (this.time >= 1 / this.rate) {
           this.time = 0;
           this.shoot = true;
+          let damageDealt = 0;
           if (this.type === "Cannon") {
             playSound(cannonShot);
             strokeWeight(4);
@@ -181,7 +199,7 @@
           if (this.type === "Catapult") {
             playSound(catapultShot);
             this.Area = this.aoeRadiusCatapult;
-            this.AoE(i);
+            damageDealt += this.AoE(i);
             strokeWeight(5);
             stroke(40);
           }
@@ -199,7 +217,7 @@
           if (this.type === "Flamethrower") {
             playSound(throwerShot);
             this.Area = this.aoeRadiusFlamethrower;
-            this.AoE(i);
+            damageDealt += this.AoE(i);
             strokeWeight(10);
             stroke(255, 200, 0, 200);
           }
@@ -217,7 +235,7 @@
           if (this.type === "Railgun") {
             playSound(railgunShot);
             this.Area = this.aoeRadiusRailgun;
-            this.AoE(i);
+            damageDealt += this.AoE(i);
             strokeWeight(11);
             stroke(0, 88, 147, 150);
             line(this.x, this.y, enemies[i].x + enemies[i].rX, enemies[i].y + enemies[i].rY);
@@ -237,7 +255,11 @@
             stroke(255);
           }
           line(this.x, this.y, enemies[i].x + enemies[i].rX, enemies[i].y + enemies[i].rY);
-          if (enemies[i].HP >= 0) enemies[i].HP -= this.damage;
+          if (enemies[i].HP >= 0) {
+            enemies[i].HP -= this.damage;
+            damageDealt += this.damage;
+          }
+          this.applyUseWear(damageDealt);
         }
       }
       if (enemies[i].HP < 0) {
@@ -299,14 +321,36 @@
     this.AreaX = enemies[i].x;
     this.AreaY = enemies[i].y;
     this.AreaC = 100;
+    let aoeDamageDealt = 0;
+    const aoeDamage = this.damage / 2;
     for (let j = 0; j < enemies.length; j++) {
       if (i === j) continue;
       const dx = enemies[j].x - this.AreaX;
       const dy = enemies[j].y - this.AreaY;
       if (dx * dx + dy * dy < this.Area * this.Area) {
-        if (enemies[j].HP >= 0) enemies[j].HP -= this.damage / 2;
+        if (enemies[j].HP >= 0) {
+          enemies[j].HP -= aoeDamage;
+          aoeDamageDealt += aoeDamage;
+        }
       }
     }
+    return aoeDamageDealt;
+  }
+
+  recalculateWorth() {
+    this.worth = this.invested * this.resaleFactor;
+  }
+
+  registerInvestment(amount) {
+    if (!amount || amount <= 0) return;
+    this.invested += amount;
+    this.recalculateWorth();
+  }
+
+  applyUseWear(damageDealt) {
+    const wear = this.resaleWearPerShot + max(0, damageDealt) * this.resaleWearPerDamage;
+    this.resaleFactor = max(this.minResaleFactor, this.resaleFactor - wear);
+    this.recalculateWorth();
   }
 
   data() {

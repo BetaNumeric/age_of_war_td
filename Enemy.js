@@ -13,11 +13,6 @@
     this.type = tmpType;
     this.spawnAge = typeof Age === "string" ? Age : "Past";
 
-    if (this.type === "Boss1" || this.type === "Boss2") {
-      this.rX = 0;
-      this.rY = 0;
-    }
-
     this.HP = tmpStr;
     this.maxHP = this.HP;
     this.maxV = this.V;
@@ -67,11 +62,9 @@
     if (this.type === "Knight") image(knight, 0, 0);
     if (this.type === "Lancer") image(lancer, 0, 0);
     if (this.type === "Rider") image(rider, 0, 0);
-    if (this.type === "Boss1") image(boss1, 0, 0);
     if (this.type === "Soldier") image(soldier, 0, 0);
     if (this.type === "Rocket") image(rocket, 0, 0);
     if (this.type === "Tank") image(enemyTank, 0, 0);
-    if (this.type === "Boss2") image(boss2, 0, 0);
     if (this.type === "Robot") image(robot, 0, 0);
     if (this.type === "Spaceship") image(spaceship, 0, 0);
     if (this.type === "Ball") image(ball, 0, 0);
@@ -79,36 +72,19 @@
     pop();
 
     const barYOffset = 16;
-    const bossBarWidth = 32;
-    const bossBarHeight = 5;
     const normalBarWidth = 16;
     const normalBarHeight = 3;
-
-    if (this.type === "Boss1" || this.type === "Boss2") {
-      fill(255, 0, 0);
-      rect(
-        this.x - bossBarWidth / 2 + this.rX,
-        this.y - barYOffset + this.rY,
-        (this.HP / this.maxHP) * bossBarWidth,
-        bossBarHeight
-      );
-      stroke(0);
-      strokeWeight(0.5);
-      noFill();
-      rect(this.x - bossBarWidth / 2 + this.rX, this.y - barYOffset + this.rY, bossBarWidth, bossBarHeight);
-    } else {
-      fill(0, 255, 0);
-      rect(
-        this.x - normalBarWidth / 2 + this.rX,
-        this.y - barYOffset + this.rY,
-        (this.HP / this.maxHP) * normalBarWidth,
-        normalBarHeight
-      );
-      stroke(0);
-      strokeWeight(0.5);
-      noFill();
-      rect(this.x - normalBarWidth / 2 + this.rX, this.y - barYOffset + this.rY, normalBarWidth, normalBarHeight);
-    }
+    fill(0, 255, 0);
+    rect(
+      this.x - normalBarWidth / 2 + this.rX,
+      this.y - barYOffset + this.rY,
+      (this.HP / this.maxHP) * normalBarWidth,
+      normalBarHeight
+    );
+    stroke(0);
+    strokeWeight(0.5);
+    noFill();
+    rect(this.x - normalBarWidth / 2 + this.rX, this.y - barYOffset + this.rY, normalBarWidth, normalBarHeight);
   }
 
   base() {

@@ -14,6 +14,104 @@ const BASE_CANVAS_HEIGHT = 704;
 const RENDER_MODE_KEY = "towerDefenseRenderMode_v1";
 const RENDER_MODE_CRISP = "crisp";
 const RENDER_MODE_SMOOTH = "smooth";
+// Central balance tuning values.
+const BALANCE = {
+  levelUpXp: {
+    Past: 200,
+    Present: 600
+  },
+  startingCoins: 350,
+  levelUpGrantCheapestMultiplier: 1,
+  transition: {
+    minStrengthRatio: 1.12,
+    maxSearchWave: 300
+  },
+  enemyHp: {
+    past: {
+      Knight: 12,
+      Lancer: 20,
+      Rider: 8
+    },
+    present: {
+      waveOffset: 2,
+      Rocket: 65,
+      Tank: 115,
+      Soldier: 52
+    },
+    future: {
+      waveOffset: 3,
+      power: 1.3,
+      Robot: 85,
+      Spaceship: 118,
+      Ball: 68
+    }
+  },
+  enemySpeed: {
+    Knight: 100,
+    Lancer: 80,
+    Rider: 120,
+    Rocket: 90,
+    Tank: 50,
+    Soldier: 110,
+    Robot: 100,
+    Spaceship: 60,
+    Ball: 120
+  },
+  enemyBounty: {
+    Past: {
+      base: 1,
+      k: 0.34,
+      cap: 12
+    },
+    Present: {
+      base: 10,
+      k: 0.5,
+      cap: 62
+    },
+    Future: {
+      base: 25,
+      k: 0.72,
+      cap: 135
+    }
+  },
+  towerUpgradeAgeScale: {
+    Past: 1,
+    Present: 1.5,
+    Future: 3.1
+  },
+  ageLoadouts: {
+    Past: {
+      types: ["Cannon", "Catapult", "Crossbow"],
+      extras: ["          -", "Area Damage", "Deceleration"],
+      costs: [75, 150, 200],
+      damage: [200, 80, 40],
+      range: [350, 600, 300],
+      rate: [5, 6, 20]
+    },
+    Present: {
+      types: ["Tank", "Flamethrower", "Turret"],
+      extras: ["          -", "Area Damage", "Deceleration"],
+      costs: [750, 1100, 1600],
+      damage: [550, 420, 320],
+      range: [760, 360, 260],
+      rate: [5, 38, 22]
+    },
+    Future: {
+      types: ["Lasercannon", "Railgun", "Wavegun"],
+      extras: ["          -", "Area Damage", "Deceleration"],
+      costs: [2500, 4500, 8000],
+      damage: [7000, 7000, 700],
+      range: [780, 320, 650],
+      rate: [3, 30, 120]
+    }
+  },
+  towerResale: {
+    initialFactor: 0.9,
+    minFactor: 2 / 3,
+    wearPerShot: 0.00002,
+    wearPerDamage: 0.0000000005
+  }
+};
 
 let mapData = {};
 let tileImages = {};
@@ -39,6 +137,7 @@ let Zy = 0;
 let lastSelect = 0;
 let waveL = 0;
 let waveN = 0;
+let ageStartWave = 0;
 let waveType = 0;
 let enemyType = 0;
 let XP = 0;
@@ -80,8 +179,8 @@ let autoPaused = false;
 let ignoreNextDelta = false;
 let renderMode = RENDER_MODE_SMOOTH;
 
-let knight, rider, lancer, boss1;
-let soldier, rocket, enemyTank, boss2;
+let knight, rider, lancer;
+let soldier, rocket, enemyTank;
 let robot, spaceship, ball;
 let castle, military, future;
 let cannon, cannon2, catapult, catapult2, crossbow, crossbow2;
@@ -113,11 +212,9 @@ function preload() {
   knight = loadImage("data/images/knight.png");
   lancer = loadImage("data/images/lancer.png");
   rider = loadImage("data/images/rider.png");
-  boss1 = loadImage("data/images/boss1.png");
   soldier = loadImage("data/images/soldier.png");
   rocket = loadImage("data/images/rocket.png");
   enemyTank = loadImage("data/images/enemyTank.png");
-  boss2 = loadImage("data/images/boss2.png");
   robot = loadImage("data/images/robot.png");
   spaceship = loadImage("data/images/spaceship.png");
   ball = loadImage("data/images/ball.png");
@@ -321,7 +418,7 @@ function draw() {
       mouseX < width / 20 * 14 + width / 4 &&
       mouseY < height / 2 + height / 20 + height / 4
     )
-    stroke(255);
+      stroke(255);
     rect(width / 20 * 14, height / 2 + height / 20, width / 4, height / 4);
     stroke(0);
   }
@@ -352,8 +449,6 @@ function draw() {
       enemies[i].draw();
       if (enemies[i].base()) {
         if (HP > 0) HP -= 10;
-        if (enemies[i].type === "Boss1") HP = 0;
-        if (enemies[i].type === "Boss2") HP = 0;
         if (HP <= 0) {
           gameState = "GameOver";
           playSound(gameOver);
@@ -549,10 +644,10 @@ function drawRenderSettingsPanel() {
   rect(modeButton.x, modeButton.y, modeButton.w, modeButton.h);
 
   textAlign(CENTER, CENTER);
-  textSize(14);
+  textSize(11);
   fill(0);
-  if (renderMode === RENDER_MODE_CRISP) text("Sharp", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
-  else text("Smooth", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
+  if (renderMode === RENDER_MODE_CRISP) text("Smooth", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
+  else text("Sharp", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
 }
 
 function drawSettingsUI() {
@@ -735,10 +830,6 @@ function handleClick() {
     }
   }
 
-  if (gameState === "GameOver") {
-    gameState = "SelectMap";
-    drawMaps();
-  }
 }
 
 function keyPressed() {
@@ -838,7 +929,7 @@ function trade() {
         if (towers[lastSelect].damage < towers[lastSelect].maxDamage) {
           towers[lastSelect].damage *= 2;
           Coins -= upgradeCost;
-          towers[lastSelect].worth += upgradeCost * (2 / 3);
+          towers[lastSelect].registerInvestment(upgradeCost);
           playSound(coins);
         }
       }
@@ -849,7 +940,7 @@ function trade() {
         if (towers[lastSelect].range < towers[lastSelect].maxRange) {
           towers[lastSelect].range *= 2;
           Coins -= upgradeCost;
-          towers[lastSelect].worth += upgradeCost * (2 / 3);
+          towers[lastSelect].registerInvestment(upgradeCost);
           playSound(coins);
         }
       }
@@ -860,7 +951,7 @@ function trade() {
         if (towers[lastSelect].rate < towers[lastSelect].maxRate) {
           towers[lastSelect].rate *= 2;
           Coins -= upgradeCost;
-          towers[lastSelect].worth += upgradeCost * (2 / 3);
+          towers[lastSelect].registerInvestment(upgradeCost);
           playSound(coins);
         }
       }
@@ -1052,8 +1143,8 @@ function drawLevelUpTooltip(levelUpXPRequired) {
 }
 
 function getLevelUpXPRequired() {
-  if (Age === "Past") return 200;
-  if (Age === "Present") return 600;
+  if (Age === "Past") return BALANCE.levelUpXp.Past;
+  if (Age === "Present") return BALANCE.levelUpXp.Present;
   return null;
 }
 
@@ -1063,30 +1154,66 @@ function isLevelUpAvailable() {
 }
 
 function getEnemyHP(type, wave) {
-  const futureScale = pow(wave, 1.3);
+  const presentWave = wave + BALANCE.enemyHp.present.waveOffset;
+  const futureWave = wave + BALANCE.enemyHp.future.waveOffset;
+  const futureScale = pow(futureWave, BALANCE.enemyHp.future.power);
 
-  if (type === "Knight") return int(12 * wave);
-  if (type === "Lancer") return int(20 * wave);
-  if (type === "Rider") return int(8 * wave);
+  if (type === "Knight") return int(BALANCE.enemyHp.past.Knight * wave);
+  if (type === "Lancer") return int(BALANCE.enemyHp.past.Lancer * wave);
+  if (type === "Rider") return int(BALANCE.enemyHp.past.Rider * wave);
 
-  if (type === "Rocket") return int(40 * wave);
-  if (type === "Tank") return int(70 * wave);
-  if (type === "Soldier") return int(30 * wave);
+  if (type === "Rocket") return int(BALANCE.enemyHp.present.Rocket * presentWave);
+  if (type === "Tank") return int(BALANCE.enemyHp.present.Tank * presentWave);
+  if (type === "Soldier") return int(BALANCE.enemyHp.present.Soldier * presentWave);
 
-  if (type === "Robot") return int(30 * futureScale);
-  if (type === "Spaceship") return int(42 * futureScale);
-  if (type === "Ball") return int(24 * futureScale);
+  if (type === "Robot") return int(BALANCE.enemyHp.future.Robot * futureScale);
+  if (type === "Spaceship") return int(BALANCE.enemyHp.future.Spaceship * futureScale);
+  if (type === "Ball") return int(BALANCE.enemyHp.future.Ball * futureScale);
 
   return 1;
 }
 
-function getEnemyBounty(enemy) {
-  if (enemy.type === "Boss1") return 700;
-  if (enemy.type === "Boss2") return 2200;
+function getTransitionSet(fromAge) {
+  if (fromAge === "Past") {
+    return {
+      fromTypes: ["Knight", "Lancer", "Rider"],
+      toTypes: ["Rocket", "Tank", "Soldier"]
+    };
+  }
+  if (fromAge === "Present") {
+    return {
+      fromTypes: ["Rocket", "Tank", "Soldier"],
+      toTypes: ["Robot", "Spaceship", "Ball"]
+    };
+  }
+  return null;
+}
 
-  let config = { base: 1, k: 0.33, cap: 12 };
-  if (enemy.spawnAge === "Present") config = { base: 7, k: 0.45, cap: 42 };
-  if (enemy.spawnAge === "Future") config = { base: 14, k: 0.55, cap: 75 };
+function getLevelUpStartWave(fromAge, previousAgeWave) {
+  const transition = getTransitionSet(fromAge);
+  if (!transition) return 1;
+
+  const maxSearchWave = BALANCE.transition.maxSearchWave;
+  const minStrengthRatio = BALANCE.transition.minStrengthRatio;
+  for (let nextAgeWave = 1; nextAgeWave <= maxSearchWave; nextAgeWave++) {
+    let meetsFloor = true;
+    for (let lane = 0; lane < transition.fromTypes.length; lane++) {
+      const prevHP = getEnemyHP(transition.fromTypes[lane], previousAgeWave);
+      const nextHP = getEnemyHP(transition.toTypes[lane], nextAgeWave);
+      if (nextHP < prevHP * minStrengthRatio) {
+        meetsFloor = false;
+        break;
+      }
+    }
+    if (meetsFloor) return nextAgeWave;
+  }
+  return maxSearchWave;
+}
+
+function getEnemyBounty(enemy) {
+  let config = BALANCE.enemyBounty.Past;
+  if (enemy.spawnAge === "Present") config = BALANCE.enemyBounty.Present;
+  if (enemy.spawnAge === "Future") config = BALANCE.enemyBounty.Future;
 
   const payout = config.base + sqrt(enemy.maxHP) * config.k + enemy.maxV / 90;
   return int(min(config.cap, payout));
@@ -1107,83 +1234,57 @@ function wave() {
   }
   if (waveL > 0) {
     if (random() < (2 + waveL / 10) * dt) {
+      const ageWave = max(1, waveN - ageStartWave + 1);
       waveL--;
       waveType--;
       if (Age === "Past") {
-        if (enemyType === 0) enemies.push(new Enemy("Knight", getEnemyHP("Knight", waveN), 100));
-        if (enemyType === 1) enemies.push(new Enemy("Lancer", getEnemyHP("Lancer", waveN), 80));
-        if (enemyType === 2) enemies.push(new Enemy("Rider", getEnemyHP("Rider", waveN), 120));
+        if (enemyType === 0) enemies.push(new Enemy("Knight", getEnemyHP("Knight", ageWave), BALANCE.enemySpeed.Knight));
+        if (enemyType === 1) enemies.push(new Enemy("Lancer", getEnemyHP("Lancer", ageWave), BALANCE.enemySpeed.Lancer));
+        if (enemyType === 2) enemies.push(new Enemy("Rider", getEnemyHP("Rider", ageWave), BALANCE.enemySpeed.Rider));
       }
       if (Age === "Present") {
-        if (enemyType === 0) enemies.push(new Enemy("Rocket", getEnemyHP("Rocket", waveN), 90));
-        if (enemyType === 1) enemies.push(new Enemy("Tank", getEnemyHP("Tank", waveN), 70));
-        if (enemyType === 2) enemies.push(new Enemy("Soldier", getEnemyHP("Soldier", waveN), 110));
+        if (enemyType === 0) enemies.push(new Enemy("Rocket", getEnemyHP("Rocket", ageWave), BALANCE.enemySpeed.Rocket));
+        if (enemyType === 1) enemies.push(new Enemy("Tank", getEnemyHP("Tank", ageWave), BALANCE.enemySpeed.Tank));
+        if (enemyType === 2) enemies.push(new Enemy("Soldier", getEnemyHP("Soldier", ageWave), BALANCE.enemySpeed.Soldier));
       }
       if (Age === "Future") {
-        if (enemyType === 0) enemies.push(new Enemy("Robot", getEnemyHP("Robot", waveN), 100));
-        if (enemyType === 1) enemies.push(new Enemy("Spaceship", getEnemyHP("Spaceship", waveN), 60));
-        if (enemyType === 2) enemies.push(new Enemy("Ball", getEnemyHP("Ball", waveN), 120));
+        if (enemyType === 0) enemies.push(new Enemy("Robot", getEnemyHP("Robot", ageWave), BALANCE.enemySpeed.Robot));
+        if (enemyType === 1) enemies.push(new Enemy("Spaceship", getEnemyHP("Spaceship", ageWave), BALANCE.enemySpeed.Spaceship));
+        if (enemyType === 2) enemies.push(new Enemy("Ball", getEnemyHP("Ball", ageWave), BALANCE.enemySpeed.Ball));
       }
     }
   }
 }
 
+function applyAgeLoadout(age) {
+  const loadout = BALANCE.ageLoadouts[age];
+  if (!loadout) return;
+
+  [typeX, typeY, typeZ] = loadout.types;
+  [extraX, extraY, extraZ] = loadout.extras;
+  [mX, mY, mZ] = loadout.costs;
+  [damageX, damageY, damageZ] = loadout.damage;
+  [rangeX, rangeY, rangeZ] = loadout.range;
+  [rateX, rateY, rateZ] = loadout.rate;
+}
+
 function levelUp() {
   lvUp = false;
   playSound(levelUpSound);
+  const previousAgeWave = max(1, waveN - ageStartWave + 1);
   if (Age === "Present") {
+    const futureStartWave = getLevelUpStartWave("Present", previousAgeWave);
     Age = "Future";
-
-    typeX = "Lasercannon";
-    typeY = "Railgun";
-    typeZ = "Wavegun";
-
-    extraX = "          -";
-    extraY = "Area Damage";
-    extraZ = "Deceleration";
-
-    mX = 800;
-    mY = 1500;
-    mZ = 3000;
-
-    damageX = 3000;
-    damageY = 3000;
-    damageZ = 200;
-
-    rangeX = 650;
-    rangeY = 250;
-    rangeZ = 500;
-
-    rateX = 2;
-    rateY = 18;
-    rateZ = 70;
+    ageStartWave = waveN - futureStartWave + 1;
+    applyAgeLoadout("Future");
+    grantLevelUpCoins();
   }
   if (Age === "Past") {
+    const presentStartWave = getLevelUpStartWave("Past", previousAgeWave);
     Age = "Present";
-
-    typeX = "Tank";
-    typeY = "Flamethrower";
-    typeZ = "Turret";
-
-    extraX = "          -";
-    extraY = "Area Damage";
-    extraZ = "Deceleration";
-
-    mX = 500;
-    mY = 700;
-    mZ = 1000;
-
-    damageX = 350;
-    damageY = 250;
-    damageZ = 200;
-
-    rangeX = 700;
-    rangeY = 300;
-    rangeZ = 200;
-
-    rateX = 4;
-    rateY = 30;
-    rateZ = 15;
+    ageStartWave = waveN - presentStartWave + 1;
+    applyAgeLoadout("Present");
+    grantLevelUpCoins();
   }
   for (let x = 0; x < gameMap.w; x++) {
     for (let y = 0; y < gameMap.h; y++) {
@@ -1191,6 +1292,12 @@ function levelUp() {
       if (gameMap.at(x, y) === "P") gameMap.set(x, y, "W");
     }
   }
+}
+
+function grantLevelUpCoins() {
+  const grant = getScaledCost(min(mX, mY, mZ) * BALANCE.levelUpGrantCheapestMultiplier);
+  Coins += grant;
+  playSound(coins);
 }
 
 function newGame() {
@@ -1201,26 +1308,9 @@ function newGame() {
   towers = [];
   waveL = 0;
   waveN = 0;
+  ageStartWave = 0;
   XP = 0;
-  Coins = 350;
-  typeX = "Cannon";
-  typeY = "Catapult";
-  typeZ = "Crossbow";
-  extraX = "          -";
-  extraY = "Area Damage";
-  extraZ = "Deceleration";
-  mX = 75;
-  mY = 150;
-  mZ = 200;
-  damageX = 200;
-  damageY = 80;
-  damageZ = 40;
-  rangeX = 350;
-  rangeY = 600;
-  rangeZ = 300;
-  rateX = 5;
-  rateY = 6;
-  rateZ = 20;
+  Coins = BALANCE.startingCoins;
   waveT = 20;
   waveType = 10;
   HP = 100;
@@ -1230,6 +1320,7 @@ function newGame() {
   lvUp = false;
   gameState = "Start";
   Age = "Past";
+  applyAgeLoadout("Past");
 
   ensureAudio();
   audioController.playMusic();
@@ -1457,6 +1548,17 @@ function getScaledCost(baseCost) {
   return int(ceil(baseCost * getCostScale()));
 }
 
+function getTowerAgeFromType(type) {
+  if (type === "Tank" || type === "Flamethrower" || type === "Turret") return "Present";
+  if (type === "Lasercannon" || type === "Railgun" || type === "Wavegun") return "Future";
+  return "Past";
+}
+
+function getUpgradeAgeScale(tower) {
+  const towerAge = getTowerAgeFromType(tower.type);
+  return BALANCE.towerUpgradeAgeScale[towerAge] || 1;
+}
+
 function getUpgradeCost(tower, stat) {
   let maxVal = 1;
   if (stat === "damage") maxVal = tower.maxDamage;
@@ -1464,6 +1566,6 @@ function getUpgradeCost(tower, stat) {
   else if (stat === "rate") maxVal = tower.maxRate;
 
   const currentVal = tower[stat];
-  const baseCost = (currentVal * 2 / maxVal) * tower.cost;
+  const baseCost = (currentVal * 2 / maxVal) * tower.cost * getUpgradeAgeScale(tower);
   return getScaledCost(baseCost);
 }
