@@ -8,6 +8,7 @@
   "towerDefenseBlank.map"
 ];
 
+const SELECT_MAP_FILES = MAP_FILES.slice(0, 6);
 const TILE_LETTERS = ["B", "C", "F", "G", "M", "P", "R", "S", "T", "W", "X", "Y", "Z"];
 const BASE_CANVAS_WIDTH = 1024;
 const BASE_CANVAS_HEIGHT = 704;
@@ -117,7 +118,8 @@ let mapData = {};
 let tileImages = {};
 let mainCanvas = null;
 
-let gameMap, map1, map2, map3, map4, map5, map6;
+let gameMap;
+let mapPreviews = [];
 let enemies = [];
 let towers = [];
 let uSelect = true;
@@ -370,57 +372,7 @@ function draw() {
     textSize(20);
     fill(255, 255, 0);
     text(`Highscore: ${highScore[0]}`, 7, 20);
-    strokeWeight(1);
-    noFill();
-    if (mouseX > width / 20 && mouseY > height / 4 && mouseX < width / 20 + width / 4 && mouseY < height / 4 + height / 4)
-      stroke(255);
-    rect(width / 20, height / 4, width / 4, height / 4);
-    stroke(0);
-    if (
-      mouseX > width / 20 * 7.5 &&
-      mouseY > height / 4 &&
-      mouseX < width / 20 * 7.5 + width / 4 &&
-      mouseY < height / 4 + height / 4
-    )
-      stroke(255);
-    rect(width / 20 * 7.5, height / 4, width / 4, height / 4);
-    stroke(0);
-    if (
-      mouseX > width / 20 * 14 &&
-      mouseY > height / 4 &&
-      mouseX < width / 20 * 14 + width / 4 &&
-      mouseY < height / 4 + height / 4
-    )
-      stroke(255);
-    rect(width / 20 * 14, height / 4, width / 4, height / 4);
-    stroke(0);
-    if (
-      mouseX > width / 20 &&
-      mouseY > height / 2 + height / 20 &&
-      mouseX < width / 20 + width / 4 &&
-      mouseY < height / 2 + height / 20 + height / 4
-    )
-      stroke(255);
-    rect(width / 20, height / 2 + height / 20, width / 4, height / 4);
-    stroke(0);
-    if (
-      mouseX > width / 20 * 7.5 &&
-      mouseY > height / 2 + height / 20 &&
-      mouseX < width / 20 * 7.5 + width / 4 &&
-      mouseY < height / 2 + height / 20 + height / 4
-    )
-      stroke(255);
-    rect(width / 20 * 7.5, height / 2 + height / 20, width / 4, height / 4);
-    stroke(0);
-    if (
-      mouseX > width / 20 * 14 &&
-      mouseY > height / 2 + height / 20 &&
-      mouseX < width / 20 * 14 + width / 4 &&
-      mouseY < height / 2 + height / 20 + height / 4
-    )
-      stroke(255);
-    rect(width / 20 * 14, height / 2 + height / 20, width / 4, height / 4);
-    stroke(0);
+    drawMapSelectionOutlines();
   }
 
   if (gameState === "Start") {
@@ -590,6 +542,47 @@ function isPointInRect(px, py, rectInfo) {
   return px >= rectInfo.x && px <= rectInfo.x + rectInfo.w && py >= rectInfo.y && py <= rectInfo.y + rectInfo.h;
 }
 
+function getMapSelectionCards() {
+  const cardW = width / 4;
+  const cardH = height / 4;
+  const leftX = width / 20;
+  const xStep = width / 20 * 6.5;
+  const topY = height / 4;
+  const bottomY = height / 2 + height / 20;
+
+  return SELECT_MAP_FILES.map((file, index) => {
+    const col = index % 3;
+    const row = floor(index / 3);
+    return {
+      mapName: file,
+      x: leftX + col * xStep,
+      y: row === 0 ? topY : bottomY,
+      w: cardW,
+      h: cardH
+    };
+  });
+}
+
+function drawMapSelectionOutlines() {
+  const cards = getMapSelectionCards();
+  strokeWeight(1);
+  noFill();
+  for (const card of cards) {
+    if (isPointInRect(mouseX, mouseY, card)) stroke(255);
+    else stroke(0);
+    rect(card.x, card.y, card.w, card.h);
+  }
+  stroke(0);
+}
+
+function getMapSelectionCardAtPoint(px, py) {
+  const cards = getMapSelectionCards();
+  for (const card of cards) {
+    if (isPointInRect(px, py, card)) return card;
+  }
+  return null;
+}
+
 function getSettingsButtonRect() {
   const size = 32;
   const menuMargin = 16;
@@ -646,8 +639,8 @@ function drawRenderSettingsPanel() {
   textAlign(CENTER, CENTER);
   textSize(11);
   fill(0);
-  if (renderMode === RENDER_MODE_CRISP) text("Smooth", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
-  else text("Sharp", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
+  if (renderMode === RENDER_MODE_CRISP) text("To Smooth", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
+  else text("To Sharp", modeButton.x + modeButton.w / 2, modeButton.y + modeButton.h / 2);
 }
 
 function drawSettingsUI() {
@@ -728,53 +721,9 @@ function handleClick() {
   }
 
   if (gameState === "SelectMap") {
-    if (mouseX > width / 20 && mouseY > height / 4 && mouseX < width / 20 + width / 4 && mouseY < height / 4 + height / 4) {
-      mapName = "towerDefense1.map";
-      newGame();
-    }
-    if (
-      mouseX > width / 20 * 7.5 &&
-      mouseY > height / 4 &&
-      mouseX < width / 20 * 7.5 + width / 4 &&
-      mouseY < height / 4 + height / 4
-    ) {
-      mapName = "towerDefense2.map";
-      newGame();
-    }
-    if (
-      mouseX > width / 20 * 14 &&
-      mouseY > height / 4 &&
-      mouseX < width / 20 * 14 + width / 4 &&
-      mouseY < height / 4 + height / 4
-    ) {
-      mapName = "towerDefense3.map";
-      newGame();
-    }
-    if (
-      mouseX > width / 20 &&
-      mouseY > height / 2 + height / 20 &&
-      mouseX < width / 20 + width / 4 &&
-      mouseY < height / 2 + height / 20 + height / 4
-    ) {
-      mapName = "towerDefense4.map";
-      newGame();
-    }
-    if (
-      mouseX > width / 20 * 7.5 &&
-      mouseY > height / 2 + height / 20 &&
-      mouseX < width / 20 * 7.5 + width / 4 &&
-      mouseY < height / 2 + height / 20 + height / 4
-    ) {
-      mapName = "towerDefense5.map";
-      newGame();
-    }
-    if (
-      mouseX > width / 20 * 14 &&
-      mouseY > height / 2 + height / 20 &&
-      mouseX < width / 20 * 14 + width / 4 &&
-      mouseY < height / 2 + height / 20 + height / 4
-    ) {
-      mapName = "towerDefense6.map";
+    const selectedCard = getMapSelectionCardAtPoint(mouseX, mouseY);
+    if (selectedCard) {
+      mapName = selectedCard.mapName;
       newGame();
     }
   }
@@ -1364,33 +1313,26 @@ function newGame() {
 }
 
 function drawMaps() {
-  if (map1) map1.destroy();
-  if (map2) map2.destroy();
-  if (map3) map3.destroy();
-  if (map4) map4.destroy();
-  if (map5) map5.destroy();
-  if (map6) map6.destroy();
+  for (const previewMap of mapPreviews) {
+    previewMap.destroy();
+  }
+  mapPreviews = [];
+
+  const cards = getMapSelectionCards();
 
   background(0);
   fill(35, 90, 0);
-  rect(width / 20, height / 4, width / 4, height / 4);
-  rect(width / 20 * 7.5, height / 4, width / 4, height / 4);
-  rect(width / 20 * 14, height / 4, width / 4, height / 4);
-  rect(width / 20, height / 2 + height / 20, width / 4, height / 4);
-  rect(width / 20 * 7.5, height / 2 + height / 20, width / 4, height / 4);
-  rect(width / 20 * 14, height / 2 + height / 20, width / 4, height / 4);
-  map1 = new GameMap("towerDefense1.map");
-  map2 = new GameMap("towerDefense2.map");
-  map3 = new GameMap("towerDefense3.map");
-  map4 = new GameMap("towerDefense4.map");
-  map5 = new GameMap("towerDefense5.map");
-  map6 = new GameMap("towerDefense6.map");
-  map1.draw(width / 20, height / 4);
-  map2.draw(width / 20 * 7.5, height / 4);
-  map3.draw(width / 20 * 14, height / 4);
-  map4.draw(width / 20, height / 2 + height / 20);
-  map5.draw(width / 20 * 7.5, height / 2 + height / 20);
-  map6.draw(width / 20 * 14, height / 2 + height / 20);
+  noStroke();
+  for (const card of cards) {
+    rect(card.x, card.y, card.w, card.h);
+  }
+
+  for (const card of cards) {
+    const previewMap = new GameMap(card.mapName);
+    mapPreviews.push(previewMap);
+    previewMap.draw(card.x, card.y);
+  }
+
   textAlign(CENTER, CENTER);
   textSize(20);
   fill(200);
