@@ -1,5 +1,6 @@
 // Add to Home Screen (A2HS) functionality
 let __deferredA2HSPrompt = null;
+const A2HS_DISMISS_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
 
 function isStandaloneDisplayMode() {
   // PWA standalone detection (Android/desktop)
@@ -64,9 +65,20 @@ function shouldShowA2HSBanner() {
   if (!detectMobileDevice()) return false;
   if (isStandaloneDisplayMode()) return false;
   try {
-    if (localStorage.getItem('a2hsDismissed') === 'true') return false;
+    // Migrate old permanent dismissal key to non-sticky behavior.
+    if (localStorage.getItem('a2hsDismissed') === 'true') {
+      localStorage.removeItem('a2hsDismissed');
+    }
+    const dismissedUntil = Number(localStorage.getItem('a2hsDismissedUntil') || '0');
+    if (Number.isFinite(dismissedUntil) && dismissedUntil > Date.now()) return false;
   } catch (_) {}
   return true;
+}
+
+function dismissA2HSBanner() {
+  try {
+    localStorage.setItem('a2hsDismissedUntil', String(Date.now() + A2HS_DISMISS_DURATION_MS));
+  } catch (_) {}
 }
 
 function showA2HSBanner({ showInstallButton, showOpenButton, text: messageText }) {
@@ -174,7 +186,7 @@ function showA2HSBanner({ showInstallButton, showOpenButton, text: messageText }
     closeBtn.style.touchAction = 'manipulation';
     bindTapAction(closeBtn, () => {
       banner.style.display = 'none';
-      try { localStorage.setItem('a2hsDismissed', 'true'); } catch (_) {}
+      dismissA2HSBanner();
     });
   }
 }
@@ -200,6 +212,7 @@ function initA2HSBanner() {
     const { installBtn, openBtn, banner } = getA2HSBannerElements();
     showA2HSBanner({ showInstallButton: true, showOpenButton: false, text: 'Install for best experience' });
     if (installBtn) {
+      installBtn.textContent = 'Install';
       bindTapAction(installBtn, async () => {
         if (!__deferredA2HSPrompt) return;
         __deferredA2HSPrompt.prompt();
@@ -234,27 +247,24 @@ function initA2HSBanner() {
   if (isAndroid) {
     setTimeout(() => {
       if (!__deferredA2HSPrompt && !isStandaloneDisplayMode()) {
-        // Check if manifest exists to determine if PWA can be installed
-        if ('serviceWorker' in navigator && window.matchMedia('(display-mode: browser)').matches) {
-          // Fallback: provide actionable instructions when install prompt is unavailable.
-          const { installBtn } = getA2HSBannerElements();
-          showA2HSBanner({ showInstallButton: true, showOpenButton: false, text: 'Install for best experience' });
-          if (installBtn) {
-            installBtn.textContent = 'How to Install';
-            bindTapAction(installBtn, () => {
-              window.alert('In Chrome, open menu (⋮) and tap "Add to Home screen" or "Install app".');
-            });
-          }
+        // Fallback: provide actionable instructions when install prompt is unavailable.
+        const { installBtn } = getA2HSBannerElements();
+        showA2HSBanner({ showInstallButton: true, showOpenButton: false, text: 'Install for best experience' });
+        if (installBtn) {
+          installBtn.textContent = 'How to Install';
+          bindTapAction(installBtn, () => {
+            window.alert('In Chrome, open menu (⋮) and tap "Add to Home screen" or "Install app".');
+          });
         }
       }
-    }, 2000);
+    }, 1200);
   }
   
   // Hide banner when app is installed
   window.addEventListener('appinstalled', () => {
     const { banner } = getA2HSBannerElements();
     if (banner) banner.style.display = 'none';
-    try { localStorage.setItem('a2hsDismissed', 'true'); } catch (_) {}
+    dismissA2HSBanner();
   });
 }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "age-of-war-td-v4";
+const CACHE_NAME = "age-of-war-td-v5";
 
 const CORE_ASSETS = [
   "./",

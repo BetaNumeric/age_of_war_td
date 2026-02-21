@@ -181,6 +181,7 @@ let autoPaused = false;
 let ignoreNextDelta = false;
 let renderMode = RENDER_MODE_SMOOTH;
 let lastTouchInputAt = 0;
+let touchGestureMode = false;
 
 let knight, rider, lancer;
 let soldier, rocket, enemyTank;
@@ -711,7 +712,34 @@ function updatePointerFromTouchEvent(event) {
 
 function touchStarted(event) {
   lastTouchInputAt = Date.now();
-  updatePointerFromTouchEvent(event);
+  const activeTouches = event && event.touches ? event.touches.length : 0;
+  if (activeTouches > 1) {
+    touchGestureMode = true;
+  }
+  // Allow browser default so pinch gestures can begin.
+  return true;
+}
+
+function touchMoved(event) {
+  const activeTouches = event && event.touches ? event.touches.length : 0;
+  if (activeTouches > 1) {
+    touchGestureMode = true;
+  }
+  // Allow browser default for pinch/pan behavior.
+  return true;
+}
+
+function touchEnded(event) {
+  lastTouchInputAt = Date.now();
+  const activeTouches = event && event.touches ? event.touches.length : 0;
+  if (activeTouches > 0) return true;
+
+  if (touchGestureMode) {
+    touchGestureMode = false;
+    return true;
+  }
+
+  if (!updatePointerFromTouchEvent(event)) return true;
   handleClick(LEFT);
   return false;
 }
