@@ -1,31 +1,124 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TowerDefense (p5.js)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Age of War TD (p5.js)</title>
+    <link rel="icon" type="image/png" href="/data/icons/icon_32.png">
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Age of War TD" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./data/icons/icon_192.png" />
+    <link rel="apple-touch-icon" href="./data/icons/icon_180.png" />
     <style>
-      html, body {
+      html,
+      body {
         margin: 0;
         padding: 0;
-        background: #000;
+        width: 100%;
         height: 100%;
         overflow: hidden;
+        background: #000;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
       }
+
       body {
         display: flex;
         align-items: center;
         justify-content: center;
+        position: fixed;
+        inset: 0;
+        overscroll-behavior: none;
+        touch-action: manipulation;
+        box-sizing: border-box;
       }
+
       canvas {
         display: block;
         max-width: 100vw;
         max-height: 100vh;
         image-rendering: auto;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #a2hs-banner {
+        display: none;
+      }
+
+      #ios-install-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        background: rgba(0, 0, 0, 0.72);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      .ios-install-card {
+        width: min(360px, 100%);
+        background: #ffffff;
+        color: #1f2d3d;
+        border-radius: 12px;
+        padding: 20px 18px 16px;
+        box-sizing: border-box;
+        font-family: Helvetica, Arial, sans-serif;
+        line-height: 1.4;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        position: relative;
+      }
+
+      .ios-install-card h2 {
+        margin: 0 28px 10px 0;
+        font-size: 22px;
+      }
+
+      .ios-install-card p {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      #ios-close-btn {
+        position: absolute;
+        right: 10px;
+        top: 8px;
+        border: none;
+        background: transparent;
+        color: #2c3e50;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
       }
     </style>
   </head>
   <body>
+    <div id="a2hs-banner" aria-live="polite">
+      <span id="a2hs-text"></span>
+      <button id="a2hs-install-btn" type="button">Install</button>
+      <button id="a2hs-open-btn" type="button">Open App</button>
+      <button id="a2hs-close-btn" type="button" aria-label="Dismiss install prompt">&times;</button>
+    </div>
+
+    <div id="ios-install-overlay" role="dialog" aria-modal="true" aria-labelledby="ios-install-title">
+      <div class="ios-install-card">
+        <button id="ios-close-btn" type="button" aria-label="Close install instructions">&times;</button>
+        <h2 id="ios-install-title">Add to Home Screen</h2>
+        <p>In Safari, tap the Share button, then choose <strong>Add to Home Screen</strong>.</p>
+        <p>Open from the Home Screen to run in standalone fullscreen mode.</p>
+      </div>
+    </div>
+
     <script src="lib/p5.min.js"></script>
     <script src="AudioController.js"></script>
     <script src="Map.js"></script>
@@ -33,5 +126,15 @@
     <script src="Projectile.js"></script>
     <script src="Tower.js"></script>
     <script src="sketch.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./service-worker.js").catch((error) => {
+            console.error("Service worker registration failed:", error);
+          });
+        });
+      }
+    </script>
+    <script src="a2hs.js"></script>
   </body>
 </html>

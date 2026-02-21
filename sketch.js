@@ -180,6 +180,7 @@ const HIGH_SCORE_KEY = "towerDefenseHighScore_v1";
 let autoPaused = false;
 let ignoreNextDelta = false;
 let renderMode = RENDER_MODE_SMOOTH;
+let lastTouchInputAt = 0;
 
 let knight, rider, lancer;
 let soldier, rocket, enemyTank;
@@ -290,6 +291,7 @@ function setup() {
   loadHighScore();
   
   document.addEventListener("contextmenu", (event) => event.preventDefault());
+  document.addEventListener("selectstart", (event) => event.preventDefault());
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       if (gameState === "Start") {
@@ -672,11 +674,9 @@ function mouseMoved() {
   }
 }
 
-function mouseClicked() {
-  if (mouseButton === LEFT) handleClick();
-}
-
 function mousePressed() {
+  if (Date.now() - lastTouchInputAt < 500) return false;
+
   if (mouseButton === RIGHT) {
     if (mouseX < 32 && mouseY < 32) {
       if (audioController) {
@@ -684,12 +684,39 @@ function mousePressed() {
       }
       return false;
     }
-    handleClick();
+    handleClick(RIGHT);
     return false;
   }
+
+  // On iOS/touch devices, p5 routes taps through mousePressed.
+  handleClick(LEFT);
+  return false;
 }
 
-function handleClick() {
+function updatePointerFromTouchEvent(event) {
+  if (!event || !mainCanvas || !mainCanvas.elt) return false;
+
+  const sourceTouch =
+    (event.touches && event.touches[0]) ||
+    (event.changedTouches && event.changedTouches[0]);
+  if (!sourceTouch) return false;
+
+  const rect = mainCanvas.elt.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+
+  mouseX = (sourceTouch.clientX - rect.left) * (width / rect.width);
+  mouseY = (sourceTouch.clientY - rect.top) * (height / rect.height);
+  return true;
+}
+
+function touchStarted(event) {
+  lastTouchInputAt = Date.now();
+  updatePointerFromTouchEvent(event);
+  handleClick(LEFT);
+  return false;
+}
+
+function handleClick(pointerButton = LEFT) {
   ensureAudio();
 
   if (gameState !== "loading") {
@@ -739,7 +766,7 @@ function handleClick() {
         }
 
     trade();
-    towerSelect();
+    towerSelect(pointerButton);
 
     if (mouseX > width - 90 && mouseY > height - 60 && mouseX < width - 90 + 75 && mouseY < height - 60 + 45) {
       if (isLevelUpAvailable()) levelUp();
@@ -908,10 +935,10 @@ function trade() {
   }
 }
 
-function towerSelect() {
+function towerSelect(pointerButton = LEFT) {
   allPlaced = true;
   if (towers.length > 0) allPlaced = towers[towers.length - 1].placed;
-  if (mouseButton === LEFT) {
+  if (pointerButton === LEFT) {
     if (select === true) select = false;
     if (gameMap.atPixel(mouseX, mouseY) === "X" && allPlaced) {
       noCursor();
@@ -932,7 +959,7 @@ function towerSelect() {
       uSelect = true;
     }
   }
-  if (mouseButton === RIGHT && select === true) {
+  if (pointerButton === RIGHT && select === true) {
     cursor();
     playSound(deleteSound);
     select = false;
