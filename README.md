@@ -5,7 +5,9 @@
 A browser-based tower defense game inspired by **Age of War**, built with p5.js.  
 Pick a map, place towers, survive waves, and evolve from the **Past** to the **Future**.
 
+
 ![age_of_war_td](https://github.com/user-attachments/assets/1eca9c38-67fc-415b-9b6c-1e35477199d9) 
+
 
 ## Features
 
@@ -15,8 +17,6 @@ Pick a map, place towers, survive waves, and evolve from the **Past** to the **F
 - Wave spawning, boss encounters, and XP-based progression
 - Coin economy and persistent local high score (`localStorage`)
 - Music + SFX with in-game volume controls
-
-![age_of_war_td_future](https://github.com/user-attachments/assets/fa71adff-da16-460d-b925-2dd35bc6c6f9)
 
 ## Controls
 
@@ -28,6 +28,12 @@ Pick a map, place towers, survive waves, and evolve from the **Past** to the **F
 - `M`: cycle volume level
 - `N`: toggle render mode (`Sharp` / `Smooth`)
 - `Delete` / `Backspace`: sell selected tower
+
+
+
+![age_of_war_td_present](https://github.com/user-attachments/assets/3f182353-c486-4bba-9adb-0dba07c1077f)
+
+
 
 ## Run Locally
 
