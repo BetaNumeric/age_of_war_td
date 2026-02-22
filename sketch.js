@@ -182,6 +182,12 @@ let ignoreNextDelta = false;
 let renderMode = RENDER_MODE_SMOOTH;
 let lastTouchInputAt = 0;
 let touchGestureMode = false;
+let mobilePlacementMode = false;
+let mobilePlaceConfirmRequested = false;
+let mobileDragTowerActive = false;
+let mobileDragTowerMoved = false;
+let mobileDragTowerOffsetX = 0;
+let mobileDragTowerOffsetY = 0;
 
 let knight, rider, lancer;
 let soldier, rocket, enemyTank;
@@ -290,6 +296,7 @@ function setup() {
 
   gameState = "loading";
   loadHighScore();
+  mobilePlacementMode = detectMobilePlacementMode();
   
   document.addEventListener("contextmenu", (event) => event.preventDefault());
   document.addEventListener("selectstart", (event) => event.preventDefault());
@@ -541,6 +548,145 @@ function syncCursorVisibility() {
   else cursor();
 }
 
+function detectMobilePlacementMode() {
+  const hasWindow = typeof window !== "undefined";
+  const hasNavigator = typeof navigator !== "undefined";
+  const touchPoints =
+    hasNavigator && typeof navigator.maxTouchPoints === "number"
+      ? navigator.maxTouchPoints
+      : 0;
+  const coarsePointer =
+    hasWindow && typeof window.matchMedia === "function"
+      ? window.matchMedia("(pointer: coarse)").matches
+      : false;
+  const anyCoarsePointer =
+    hasWindow && typeof window.matchMedia === "function"
+      ? window.matchMedia("(any-pointer: coarse)").matches
+      : false;
+  const narrowViewport =
+    hasWindow && typeof window.innerWidth === "number" && typeof window.innerHeight === "number"
+      ? Math.min(window.innerWidth, window.innerHeight) <= 900
+      : false;
+  return coarsePointer || anyCoarsePointer || (touchPoints > 0 && narrowViewport);
+}
+
+function isMobilePlacementFlowActive() {
+  return mobilePlacementMode && gameState === "Start";
+}
+
+function getPendingTower() {
+  if (!select || towers.length === 0) return null;
+  const pendingTower = towers[towers.length - 1];
+  if (!pendingTower || pendingTower.placed) return null;
+  return pendingTower;
+}
+
+function getMobilePlacementButtons(tower = null) {
+  const pendingTower = tower || getPendingTower();
+  if (!pendingTower) return null;
+
+  const size = 38;
+  const half = size / 2;
+  const margin = 8;
+  const offsetX = pendingTower.d * 1.1 + half;
+  const offsetY = pendingTower.d * 1.2;
+  const minCx = margin + half;
+  const maxCx = width - margin - half;
+  const minCy = margin + half;
+  const maxCy = height - margin - half;
+
+  let actionCy = pendingTower.y - offsetY;
+  if (actionCy < minCy + 2) actionCy = pendingTower.y + offsetY;
+  actionCy = constrain(actionCy, minCy, maxCy);
+
+  const placeCx = constrain(pendingTower.x + offsetX, minCx, maxCx);
+  const cancelCx = constrain(pendingTower.x - offsetX, minCx, maxCx);
+  const place = { x: placeCx - half, y: actionCy - half, w: size, h: size, cx: placeCx, cy: actionCy, r: half };
+  const cancel = { x: cancelCx - half, y: actionCy - half, w: size, h: size, cx: cancelCx, cy: actionCy, r: half };
+  return { place, cancel };
+}
+
+function seedMobilePendingTowerPosition(tower) {
+  if (!tower) return;
+  const liftedY = mouseY - tower.d * 1.6;
+  tower.x = constrain(mouseX, tower.d / 2, width - tower.d / 2);
+  tower.y = constrain(liftedY, tower.d / 2, height - tower.d / 2);
+}
+
+function canAffordTowerPlacement(tower) {
+  if (!tower) return false;
+  return Coins - getScaledCost(tower.cost) >= 0;
+}
+
+function canCommitPendingTowerPlacement() {
+  const pendingTower = getPendingTower();
+  if (!pendingTower) return false;
+  return pendingTower.placeable() && canAffordTowerPlacement(pendingTower);
+}
+
+function cancelPendingTowerPlacement(playCancelSound = true) {
+  const pendingTower = getPendingTower();
+  if (!pendingTower) return false;
+  if (playCancelSound) playSound(deleteSound);
+  towers.pop();
+  select = false;
+  uSelect = true;
+  mobilePlaceConfirmRequested = false;
+  mobileDragTowerActive = false;
+  mobileDragTowerMoved = false;
+  cursor();
+  return true;
+}
+
+function shouldCommitTowerPlacement(tower) {
+  if (isMobilePlacementFlowActive()) {
+    const pendingTower = getPendingTower();
+    if (!pendingTower || pendingTower !== tower) return false;
+    if (!mobilePlaceConfirmRequested) return false;
+    mobilePlaceConfirmRequested = false;
+    return true;
+  }
+  return select === false;
+}
+
+function getTowerPlacementPoint(tower) {
+  if (isMobilePlacementFlowActive()) {
+    const pendingTower = getPendingTower();
+    if (pendingTower && pendingTower === tower) {
+      return { x: tower.x, y: tower.y };
+    }
+  }
+  return { x: mouseX, y: mouseY };
+}
+
+function drawMobilePlacementControls() {
+  if (!isMobilePlacementFlowActive()) return;
+  const pendingTower = getPendingTower();
+  if (!pendingTower) return;
+
+  const controls = getMobilePlacementButtons(pendingTower);
+  if (!controls) return;
+  const { place: placeButton, cancel: cancelButton } = controls;
+  const canPlace = canCommitPendingTowerPlacement();
+
+  push();
+  noStroke();
+  fill(canPlace ? 34 : 80, canPlace ? 150 : 80, canPlace ? 45 : 80, 225);
+  ellipse(placeButton.cx, placeButton.cy, placeButton.w, placeButton.h);
+  fill(170, 40, 40, 225);
+  ellipse(cancelButton.cx, cancelButton.cy, cancelButton.w, cancelButton.h);
+
+  noFill();
+  strokeWeight(3);
+  stroke(canPlace ? 255 : 190);
+  line(placeButton.cx - 7, placeButton.cy + 1, placeButton.cx - 1, placeButton.cy + 7);
+  line(placeButton.cx - 1, placeButton.cy + 7, placeButton.cx + 9, placeButton.cy - 6);
+  stroke(255);
+  line(cancelButton.cx - 7, cancelButton.cy - 7, cancelButton.cx + 7, cancelButton.cy + 7);
+  line(cancelButton.cx + 7, cancelButton.cy - 7, cancelButton.cx - 7, cancelButton.cy + 7);
+  pop();
+}
+
 function isPointInRect(px, py, rectInfo) {
   return px >= rectInfo.x && px <= rectInfo.x + rectInfo.w && py >= rectInfo.y && py <= rectInfo.y + rectInfo.h;
 }
@@ -715,8 +861,37 @@ function touchStarted(event) {
   const activeTouches = event && event.touches ? event.touches.length : 0;
   if (activeTouches > 1) {
     touchGestureMode = true;
+    mobileDragTowerActive = false;
+    mobileDragTowerMoved = false;
+    return true;
   }
-  // Allow browser default so pinch gestures can begin.
+
+  if (!isMobilePlacementFlowActive()) return true;
+  if (!updatePointerFromTouchEvent(event)) return true;
+
+  const pendingTower = getPendingTower();
+  if (!pendingTower) return true;
+
+  const controls = getMobilePlacementButtons(pendingTower);
+  if (
+    controls &&
+    (isPointInRect(mouseX, mouseY, controls.place) || isPointInRect(mouseX, mouseY, controls.cancel))
+  ) {
+    return true;
+  }
+
+  mobileDragTowerActive = true;
+  mobileDragTowerMoved = false;
+  mobileDragTowerOffsetX = pendingTower.x - mouseX;
+  mobileDragTowerOffsetY = pendingTower.y - mouseY;
+
+  if (
+    abs(mobileDragTowerOffsetX) < pendingTower.d * 0.35 &&
+    abs(mobileDragTowerOffsetY) < pendingTower.d * 0.35
+  ) {
+    mobileDragTowerOffsetY = -pendingTower.d * 1.6;
+  }
+
   return true;
 }
 
@@ -724,9 +899,27 @@ function touchMoved(event) {
   const activeTouches = event && event.touches ? event.touches.length : 0;
   if (activeTouches > 1) {
     touchGestureMode = true;
+    mobileDragTowerActive = false;
+    mobileDragTowerMoved = false;
+    return true;
   }
-  // Allow browser default for pinch/pan behavior.
-  return true;
+
+  if (!isMobilePlacementFlowActive() || !mobileDragTowerActive) return true;
+  if (!updatePointerFromTouchEvent(event)) return true;
+
+  const pendingTower = getPendingTower();
+  if (!pendingTower) {
+    mobileDragTowerActive = false;
+    mobileDragTowerMoved = false;
+    return true;
+  }
+
+  pendingTower.x = constrain(mouseX + mobileDragTowerOffsetX, pendingTower.d / 2, width - pendingTower.d / 2);
+  pendingTower.y = constrain(mouseY + mobileDragTowerOffsetY, pendingTower.d / 2, height - pendingTower.d / 2);
+  mobileDragTowerMoved = true;
+
+  // Consume when dragging a tower to avoid accidental page movement.
+  return false;
 }
 
 function touchEnded(event) {
@@ -736,10 +929,17 @@ function touchEnded(event) {
 
   if (touchGestureMode) {
     touchGestureMode = false;
+    mobileDragTowerActive = false;
+    mobileDragTowerMoved = false;
     return true;
   }
 
+  const draggedTower = mobileDragTowerMoved;
+  mobileDragTowerActive = false;
+  mobileDragTowerMoved = false;
+
   if (!updatePointerFromTouchEvent(event)) return true;
+  if (draggedTower) return false;
   handleClick(LEFT);
   return false;
 }
@@ -784,6 +984,25 @@ function handleClick(pointerButton = LEFT) {
   }
 
   if (gameState === "Start") {
+    if (isMobilePlacementFlowActive()) {
+      const pendingTower = getPendingTower();
+      if (pendingTower) {
+        const controls = getMobilePlacementButtons(pendingTower);
+        if (controls && isPointInRect(mouseX, mouseY, controls.place)) {
+          if (canCommitPendingTowerPlacement()) {
+            mobilePlaceConfirmRequested = true;
+          } else {
+            playSound(errorSound);
+          }
+          return;
+        }
+        if (controls && isPointInRect(mouseX, mouseY, controls.cancel)) {
+          cancelPendingTowerPlacement(true);
+          return;
+        }
+      }
+    }
+
     if (mouseY < 544) uSelect = true;
 
     if (towers.length > 0)
@@ -967,27 +1186,52 @@ function towerSelect(pointerButton = LEFT) {
   allPlaced = true;
   if (towers.length > 0) allPlaced = towers[towers.length - 1].placed;
   if (pointerButton === LEFT) {
-    if (select === true) select = false;
-    if (gameMap.atPixel(mouseX, mouseY) === "X" && allPlaced) {
+    const selectedTile = gameMap.atPixel(mouseX, mouseY);
+
+    if (!isMobilePlacementFlowActive() && select === true) select = false;
+
+    if (selectedTile === "X" && allPlaced) {
       noCursor();
-      if (select === false) towers.push(new Tower(typeX, mX, damageX, rangeX, rateX));
+      if (select === false) {
+        const tower = new Tower(typeX, mX, damageX, rangeX, rateX);
+        if (isMobilePlacementFlowActive()) {
+          seedMobilePendingTowerPosition(tower);
+          mobilePlaceConfirmRequested = false;
+        }
+        towers.push(tower);
+      }
       select = true;
       uSelect = true;
     }
-    if (gameMap.atPixel(mouseX, mouseY) === "Y" && allPlaced) {
+    if (selectedTile === "Y" && allPlaced) {
       noCursor();
-      if (select === false) towers.push(new Tower(typeY, mY, damageY, rangeY, rateY));
+      if (select === false) {
+        const tower = new Tower(typeY, mY, damageY, rangeY, rateY);
+        if (isMobilePlacementFlowActive()) {
+          seedMobilePendingTowerPosition(tower);
+          mobilePlaceConfirmRequested = false;
+        }
+        towers.push(tower);
+      }
       select = true;
       uSelect = true;
     }
-    if (gameMap.atPixel(mouseX, mouseY) === "Z" && allPlaced) {
+    if (selectedTile === "Z" && allPlaced) {
       noCursor();
-      if (select === false) towers.push(new Tower(typeZ, mZ, damageZ, rangeZ, rateZ));
+      if (select === false) {
+        const tower = new Tower(typeZ, mZ, damageZ, rangeZ, rateZ);
+        if (isMobilePlacementFlowActive()) {
+          seedMobilePendingTowerPosition(tower);
+          mobilePlaceConfirmRequested = false;
+        }
+        towers.push(tower);
+      }
       select = true;
       uSelect = true;
     }
   }
   if (pointerButton === RIGHT && select === true) {
+    if (cancelPendingTowerPlacement(true)) return;
     cursor();
     playSound(deleteSound);
     select = false;
@@ -1028,8 +1272,12 @@ function GUI() {
   }
   if (towers.length > 0) {
     if (!uSelect) towers[lastSelect].data();
-    if (select) if (towers[towers.length - 1].mouseInside()) towers[towers.length - 1].data();
+    if (select)
+      if (isMobilePlacementFlowActive() || towers[towers.length - 1].mouseInside()) towers[towers.length - 1].data();
   }
+
+  drawMobilePlacementControls();
+
   fill(0, 255, 0);
   rect(width - 90, height - 145, 75, 35);
   fill(255, 0, 0);
@@ -1322,6 +1570,9 @@ function newGame() {
   select = false;
   allPlaced = true;
   lvUp = false;
+  mobilePlaceConfirmRequested = false;
+  mobileDragTowerActive = false;
+  mobileDragTowerMoved = false;
   gameState = "Start";
   Age = "Past";
   applyAgeLoadout("Past");

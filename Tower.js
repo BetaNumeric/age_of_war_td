@@ -110,8 +110,17 @@
   }
 
   placeTower() {
-    this.x = mouseX;
-    this.y = mouseY;
+    const placementPoint =
+      typeof getTowerPlacementPoint === "function"
+        ? getTowerPlacementPoint(this)
+        : { x: mouseX, y: mouseY };
+    this.x = placementPoint.x;
+    this.y = placementPoint.y;
+    const shouldCommitPlacement =
+      typeof shouldCommitTowerPlacement === "function"
+        ? shouldCommitTowerPlacement(this)
+        : select === false;
+
     if (this.placeable()) {
       textAlign(CENTER, CENTER);
       textSize(this.d / 3);
@@ -126,7 +135,7 @@
         text("$" + int(costNow), this.x, this.y - this.d / 2);
         noFill();
       }
-      if (select === false) {
+      if (shouldCommitPlacement) {
         if (Coins - costNow < 0) {
           this.del = true;
         } else {
@@ -138,6 +147,7 @@
           playSound(place);
           playSound(coins);
           this.placed = true;
+          select = false;
           if (typeof keyIsDown === 'function' && keyIsDown(SHIFT)) {
             towers.push(new Tower(this.type, this.baseCost, this.maxDamage, this.maxRange, this.maxRate));
             select = true;
@@ -148,7 +158,7 @@
           }
         }
       }
-    } else if (select === false) {
+    } else if (shouldCommitPlacement) {
       this.del = true;
     }
   }
@@ -291,7 +301,13 @@
   towerImage() {
     noStroke();
     noFill();
-    if (!this.placeable() && select && this.mouseInside()) fill(255, 0, 0, 100);
+    const isPendingSelection =
+      !this.placed && select && towers.length > 0 && towers[towers.length - 1] === this;
+    const mobilePending =
+      isPendingSelection &&
+      typeof isMobilePlacementFlowActive === "function" &&
+      isMobilePlacementFlowActive();
+    if (!this.placeable() && ((select && this.mouseInside()) || mobilePending)) fill(255, 0, 0, 100);
     ellipse(this.x, this.y, this.d, this.d);
     
     if (this.imgBase) image(this.imgBase, this.x, this.y);
@@ -442,15 +458,16 @@
 
   placeable() {
     let inT = false;
-    if (towers.length > 1) {
-      const current = towers[towers.length - 1];
-      for (let i = 0; i < towers.length - 1; i++) {
-        const dx = current.x - towers[i].x;
-        const dy = current.y - towers[i].y;
-        const r = current.d / 2 + towers[i].d / 2;
-        if (dx * dx + dy * dy < r * r) inT = true;
+    for (let i = 0; i < towers.length; i++) {
+      if (towers[i] === this) continue;
+      const dx = this.x - towers[i].x;
+      const dy = this.y - towers[i].y;
+      const r = this.d / 2 + towers[i].d / 2;
+      if (dx * dx + dy * dy < r * r) {
+        inT = true;
+        break;
       }
     }
-    return !inT && gameMap.testTileFullyInsideRect(mouseX, mouseY, this.d, this.d, "G");
+    return !inT && gameMap.testTileFullyInsideRect(this.x, this.y, this.d, this.d, "G");
   }
 }
