@@ -180,7 +180,6 @@ const HIGH_SCORE_KEY = "towerDefenseHighScore_v1";
 let autoPaused = false;
 let ignoreNextDelta = false;
 let renderMode = RENDER_MODE_SMOOTH;
-let lastTouchInputAt = 0;
 let touchGestureMode = false;
 let mobilePlacementMode = false;
 let mobilePlaceConfirmRequested = false;
@@ -822,8 +821,6 @@ function mouseMoved() {
 }
 
 function mousePressed() {
-  if (Date.now() - lastTouchInputAt < 500) return false;
-
   if (mouseButton === RIGHT) {
     if (mouseX < 32 && mouseY < 32) {
       if (audioController) {
@@ -857,7 +854,6 @@ function updatePointerFromTouchEvent(event) {
 }
 
 function touchStarted(event) {
-  lastTouchInputAt = Date.now();
   const activeTouches = event && event.touches ? event.touches.length : 0;
   if (activeTouches > 1) {
     touchGestureMode = true;
@@ -923,7 +919,6 @@ function touchMoved(event) {
 }
 
 function touchEnded(event) {
-  lastTouchInputAt = Date.now();
   const activeTouches = event && event.touches ? event.touches.length : 0;
   if (activeTouches > 0) return true;
 
