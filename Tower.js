@@ -415,7 +415,7 @@
       textAlign(LEFT, TOP);
       fill(255);
       textSize(25);
-      text(this.type, panelLeft + 16, panelTop + 10);
+      text(this.type, panelLeft + 16, this.sellButtonY);
       textSize(20);
       text(
         `Damage: ${int(this.damage)} (${int((this.damage / this.maxDamage) * 100)}%)`,

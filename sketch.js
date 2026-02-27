@@ -22,9 +22,9 @@ const BALANCE = {
     Present: 600
   },
   startingCoins: 350,
-  levelUpGrantCheapestMultiplier: 1,
+  levelUpGrantCheapestMultiplier: 0.75,
   transition: {
-    minStrengthRatio: 1.12,
+    minStrengthRatio: 1.18,
     maxSearchWave: 300
   },
   enemyHp: {
@@ -34,14 +34,14 @@ const BALANCE = {
       Rider: 8
     },
     present: {
-      waveOffset: 2,
+      waveOffset: 3,
       Rocket: 65,
       Tank: 115,
       Soldier: 52
     },
     future: {
       waveOffset: 3,
-      power: 1.3,
+      power: 1.38,
       Robot: 85,
       Spaceship: 118,
       Ball: 68
@@ -70,15 +70,23 @@ const BALANCE = {
       cap: 62
     },
     Future: {
-      base: 25,
-      k: 0.72,
-      cap: 135
+      base: 20,
+      k: 0.58,
+      cap: 105
     }
   },
   towerUpgradeAgeScale: {
     Past: 1,
-    Present: 1.5,
-    Future: 3.1
+    Present: 1.7,
+    Future: 4.2
+  },
+  baseRepair: {
+    hpPerClick: 10,
+    costPerHp: {
+      Past: 25,
+      Present: 200,
+      Future: 1000
+    }
   },
   ageLoadouts: {
     Past: {
@@ -101,9 +109,9 @@ const BALANCE = {
       types: ["Lasercannon", "Railgun", "Wavegun"],
       extras: ["          -", "Area Damage", "Deceleration"],
       costs: [2500, 4500, 8000],
-      damage: [7000, 7000, 700],
+      damage: [6200, 6200, 620],
       range: [780, 320, 650],
-      rate: [3, 30, 120]
+      rate: [3, 30, 100]
     }
   },
   towerResale: {
@@ -154,6 +162,7 @@ let gameOverOverlayDrawn = false;
 let mX = 0;
 let mY = 0;
 let mZ = 0;
+let baseSelected = false;
 let damageX = 0;
 let rangeX = 0;
 let rateX = 0;
@@ -998,14 +1007,23 @@ function handleClick(pointerButton = LEFT) {
       }
     }
 
-    if (mouseY < 544) uSelect = true;
+    if (mouseY < 544) {
+      uSelect = true;
+      baseSelected = false;
+    }
 
     if (towers.length > 0)
       for (let i = 0; i < towers.length; i++)
         if (towers[i].mouseInside()) {
           lastSelect = i;
           uSelect = false;
+          baseSelected = false;
         }
+
+    if (!select && isPointInsideBase(mouseX, mouseY)) {
+      uSelect = false;
+      baseSelected = true;
+    }
 
     trade();
     towerSelect(pointerButton);
@@ -1095,7 +1113,7 @@ function keyPressed() {
   }
 
   if (keyCode === DELETE || keyCode === BACKSPACE) {
-    if (uSelect === false) {
+    if (uSelect === false && !baseSelected) {
       Coins += towers[lastSelect].worth;
       playSound(deleteSound);
       playSound(coins);
@@ -1134,6 +1152,18 @@ function keyPressed() {
 
 function trade() {
   if (uSelect === false && select === false) {
+    if (baseSelected) {
+      if (mouseX > 422 && mouseY > 625 && mouseX < 422 + 48 && mouseY < 625 + 24) {
+        const repairCost = getBaseRepairCost();
+        if (repairCost > 0 && Coins >= repairCost) {
+          HP = min(getBaseMaxHP(), HP + BALANCE.baseRepair.hpPerClick);
+          Coins -= repairCost;
+          playSound(coins);
+        }
+      }
+      return;
+    }
+
     if (mouseX > 624 && mouseY > 560 && mouseX < 624 + 64 && mouseY < 560 + 32) {
       Coins += towers[lastSelect].worth;
       playSound(deleteSound);
@@ -1197,6 +1227,7 @@ function towerSelect(pointerButton = LEFT) {
       }
       select = true;
       uSelect = true;
+      baseSelected = false;
     }
     if (selectedTile === "Y" && allPlaced) {
       noCursor();
@@ -1210,6 +1241,7 @@ function towerSelect(pointerButton = LEFT) {
       }
       select = true;
       uSelect = true;
+      baseSelected = false;
     }
     if (selectedTile === "Z" && allPlaced) {
       noCursor();
@@ -1223,6 +1255,7 @@ function towerSelect(pointerButton = LEFT) {
       }
       select = true;
       uSelect = true;
+      baseSelected = false;
     }
   }
   if (pointerButton === RIGHT && select === true) {
@@ -1232,6 +1265,7 @@ function towerSelect(pointerButton = LEFT) {
     select = false;
     towers.pop();
     uSelect = true;
+    baseSelected = false;
   }
 }
 
@@ -1251,22 +1285,32 @@ function GUI() {
   rect(bX - 17, bY - 3, 33, 5);
   fill(0, 255, 0);
   rect(bX - 17, bY - 3, (HP / 100) * 33, 5);
-  if (uSelect && !select) {
-    fill(0, 64);
-    rect(416, 544, 288, 160);
-    const panelLeft = 416;
-    const panelTop = 544;
-    textAlign(LEFT, TOP);
-    textSize(25);
-    fill(255);
-    text("Type", panelLeft + 16, panelTop + 10);
-    textSize(20);
-    text("Damage:   -", panelLeft + 64, panelTop + 54);
-    text("Range:      -", panelLeft + 64, panelTop + 84);
-    text("Rate:         -", panelLeft + 64, panelTop + 114);
+  if (baseSelected) {
+    noFill();
+    stroke(255, 255, 0, 180);
+    strokeWeight(2);
+    ellipse(bX, bY, 44, 44);
+    noStroke();
+  }
+  if ((uSelect || baseSelected) && !select) {
+    if (baseSelected) drawBaseDataPanel();
+    else {
+      fill(0, 64);
+      rect(416, 544, 288, 160);
+      const panelLeft = 416;
+      const panelTop = 544;
+      textAlign(LEFT, TOP);
+      textSize(25);
+      fill(255);
+      text("Type", panelLeft + 16, panelTop + 10);
+      textSize(20);
+      text("Damage:   -", panelLeft + 64, panelTop + 54);
+      text("Range:      -", panelLeft + 64, panelTop + 84);
+      text("Rate:         -", panelLeft + 64, panelTop + 114);
+    }
   }
   if (towers.length > 0) {
-    if (!uSelect) towers[lastSelect].data();
+    if (!uSelect && !baseSelected) towers[lastSelect].data();
     if (select)
       if (isMobilePlacementFlowActive() || towers[towers.length - 1].mouseInside()) towers[towers.length - 1].data();
   }
@@ -1389,6 +1433,67 @@ function drawLevelUpTooltip(levelUpXPRequired) {
   text(tooltipText, tipX + 6, tipY + 6);
 }
 
+function getBaseMaxHP() {
+  return 100;
+}
+
+function isPointInsideBase(px, py) {
+  const radius = (gameMap && gameMap.tileSize ? gameMap.tileSize : 32) * 0.75;
+  const dx = bX - px;
+  const dy = bY - py;
+  return dx * dx + dy * dy <= radius * radius;
+}
+
+function getBaseRepairCost() {
+  const maxHP = getBaseMaxHP();
+  const missingHP = max(0, maxHP - HP);
+  if (missingHP <= 0) return 0;
+  const repairHP = min(BALANCE.baseRepair.hpPerClick, missingHP);
+  const costPerHpByAge = BALANCE.baseRepair.costPerHp;
+  const costPerHp = costPerHpByAge[Age] || costPerHpByAge.Past;
+  return getScaledCost(repairHP * costPerHp);
+}
+
+function drawBaseDataPanel() {
+  const panelLeft = 416;
+  const panelTop = 544;
+  const hpBoxX = 624;
+  const hpBoxY = 560;
+  const hpBoxW = 64;
+  const hpBoxH = 32;
+  const repairCost = getBaseRepairCost();
+  const canRepair = repairCost > 0 && Coins >= repairCost;
+
+  textAlign(LEFT, TOP);
+  fill(0, 64);
+  rect(panelLeft, panelTop, 288, 160);
+  textSize(25);
+  fill(255);
+  text("Base", panelLeft + 16, hpBoxY);
+
+  fill(255, 255, 0);
+  rect(hpBoxX, hpBoxY, hpBoxW, hpBoxH);
+  textAlign(CENTER, CENTER);
+  fill(0);
+  textSize(16);
+  text(`${int(HP)}/${getBaseMaxHP()}`, hpBoxX + hpBoxW / 2, hpBoxY + hpBoxH / 2);
+
+  textAlign(LEFT, TOP);
+  textSize(20);
+  fill(255);
+  text(`Repair: +${BALANCE.baseRepair.hpPerClick} HP`, panelLeft + 64, panelTop + 84);
+
+  if (repairCost > 0) {
+    if (canRepair) fill(0, 155, 0);
+    else fill(255, 0, 0);
+    rect(422, 625, 48, 24);
+    textAlign(LEFT, CENTER);
+    fill(255);
+    textSize(14);
+    text(` $${repairCost}`, 420, 637);
+  }
+}
+
 function getLevelUpXPRequired() {
   if (Age === "Past") return BALANCE.levelUpXp.Past;
   if (Age === "Present") return BALANCE.levelUpXp.Present;
@@ -1473,31 +1578,43 @@ function wave() {
   if (waveT < 0) {
     waveT = 20;
     waveN++;
-    waveL += 10;
+    waveL += Age === "Future" ? 12 : Age === "Present" ? 11 : 10;
   }
   if (waveType <= 0) {
     waveType = 10;
     enemyType = int(random(3));
   }
   if (waveL > 0) {
-    if (random() < (2 + waveL / 10) * dt) {
-      const ageWave = max(1, waveN - ageStartWave + 1);
+    const ageWave = max(1, waveN - ageStartWave + 1);
+    const pressureScale =
+      Age === "Future"
+        ? 1 + min(0.45, ageWave * 0.02)
+        : Age === "Present"
+          ? 1 + min(0.2, ageWave * 0.01)
+          : 1;
+    const speedScale =
+      Age === "Future"
+        ? 1 + min(0.25, ageWave * 0.012)
+        : Age === "Present"
+          ? 1 + min(0.12, ageWave * 0.006)
+          : 1;
+    if (random() < (2 + waveL / 10) * pressureScale * dt) {
       waveL--;
       waveType--;
       if (Age === "Past") {
-        if (enemyType === 0) enemies.push(new Enemy("Knight", getEnemyHP("Knight", ageWave), BALANCE.enemySpeed.Knight));
-        if (enemyType === 1) enemies.push(new Enemy("Lancer", getEnemyHP("Lancer", ageWave), BALANCE.enemySpeed.Lancer));
-        if (enemyType === 2) enemies.push(new Enemy("Rider", getEnemyHP("Rider", ageWave), BALANCE.enemySpeed.Rider));
+        if (enemyType === 0) enemies.push(new Enemy("Knight", getEnemyHP("Knight", ageWave), BALANCE.enemySpeed.Knight * speedScale));
+        if (enemyType === 1) enemies.push(new Enemy("Lancer", getEnemyHP("Lancer", ageWave), BALANCE.enemySpeed.Lancer * speedScale));
+        if (enemyType === 2) enemies.push(new Enemy("Rider", getEnemyHP("Rider", ageWave), BALANCE.enemySpeed.Rider * speedScale));
       }
       if (Age === "Present") {
-        if (enemyType === 0) enemies.push(new Enemy("Rocket", getEnemyHP("Rocket", ageWave), BALANCE.enemySpeed.Rocket));
-        if (enemyType === 1) enemies.push(new Enemy("Tank", getEnemyHP("Tank", ageWave), BALANCE.enemySpeed.Tank));
-        if (enemyType === 2) enemies.push(new Enemy("Soldier", getEnemyHP("Soldier", ageWave), BALANCE.enemySpeed.Soldier));
+        if (enemyType === 0) enemies.push(new Enemy("Rocket", getEnemyHP("Rocket", ageWave), BALANCE.enemySpeed.Rocket * speedScale));
+        if (enemyType === 1) enemies.push(new Enemy("Tank", getEnemyHP("Tank", ageWave), BALANCE.enemySpeed.Tank * speedScale));
+        if (enemyType === 2) enemies.push(new Enemy("Soldier", getEnemyHP("Soldier", ageWave), BALANCE.enemySpeed.Soldier * speedScale));
       }
       if (Age === "Future") {
-        if (enemyType === 0) enemies.push(new Enemy("Robot", getEnemyHP("Robot", ageWave), BALANCE.enemySpeed.Robot));
-        if (enemyType === 1) enemies.push(new Enemy("Spaceship", getEnemyHP("Spaceship", ageWave), BALANCE.enemySpeed.Spaceship));
-        if (enemyType === 2) enemies.push(new Enemy("Ball", getEnemyHP("Ball", ageWave), BALANCE.enemySpeed.Ball));
+        if (enemyType === 0) enemies.push(new Enemy("Robot", getEnemyHP("Robot", ageWave), BALANCE.enemySpeed.Robot * speedScale));
+        if (enemyType === 1) enemies.push(new Enemy("Spaceship", getEnemyHP("Spaceship", ageWave), BALANCE.enemySpeed.Spaceship * speedScale));
+        if (enemyType === 2) enemies.push(new Enemy("Ball", getEnemyHP("Ball", ageWave), BALANCE.enemySpeed.Ball * speedScale));
       }
     }
   }
@@ -1562,6 +1679,7 @@ function newGame() {
   waveType = 10;
   HP = 100;
   uSelect = true;
+  baseSelected = false;
   select = false;
   allPlaced = true;
   lvUp = false;
