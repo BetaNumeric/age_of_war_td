@@ -184,7 +184,6 @@ let extraX = "";
 let extraY = "";
 let extraZ = "";
 let highScore = ["0"];
-let defaultHighScore = ["0"];
 const HIGH_SCORE_KEY = "towerDefenseHighScore_v1";
 let autoPaused = false;
 let ignoreNextDelta = false;
@@ -285,7 +284,6 @@ function preload() {
   audioController.loadSFX(errorSound, "data/sounds/error.mp3");
   audioController.loadSFX(gameOver, "data/sounds/gameOver.mp3");
 
-  defaultHighScore = loadStrings("data/highScore.txt");
 }
 
 function setup() {
@@ -1802,11 +1800,7 @@ function loadHighScore() {
     }
   } catch (err) {}
 
-  if (defaultHighScore && defaultHighScore.length > 0) {
-    highScore = [String(defaultHighScore[0]).trim()];
-  } else {
-    highScore = ["0"];
-  }
+  highScore = ["0"];
   oldScore = int(highScore[0]);
 }
 

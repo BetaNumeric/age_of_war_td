@@ -1,4 +1,4 @@
-const CACHE_NAME = "age-of-war-td-v5";
+const CACHE_NAME = "age-of-war-td-v6";
 
 const CORE_ASSETS = [
   "./",
@@ -9,11 +9,9 @@ const CORE_ASSETS = [
   "./AudioController.js",
   "./Map.js",
   "./Enemy.js",
-  "./Projectile.js",
   "./Tower.js",
   "./sketch.js",
   "./lib/p5.min.js",
-  "./data/highScore.txt",
   "./data/towerDefense1.map",
   "./data/towerDefense2.map",
   "./data/towerDefense3.map",

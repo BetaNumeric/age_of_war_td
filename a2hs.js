@@ -26,12 +26,11 @@ function detectMobileDevice() {
 function getA2HSBannerElements() {
   const banner = document.getElementById('a2hs-banner');
   const installBtn = document.getElementById('a2hs-install-btn');
-  const openBtn = document.getElementById('a2hs-open-btn');
   const closeBtn = document.getElementById('a2hs-close-btn');
   const text = document.getElementById('a2hs-text');
   const iosOverlay = document.getElementById('ios-install-overlay');
   const iosCloseBtn = document.getElementById('ios-close-btn');
-  return { banner, installBtn, openBtn, closeBtn, text, iosOverlay, iosCloseBtn };
+  return { banner, installBtn, closeBtn, text, iosOverlay, iosCloseBtn };
 }
 
 function shieldElementFromGameTouch(el) {
@@ -81,12 +80,11 @@ function dismissA2HSBanner() {
   } catch (_) {}
 }
 
-function showA2HSBanner({ showInstallButton, showOpenButton, text: messageText }) {
-  const { banner, installBtn, openBtn, closeBtn, text } = getA2HSBannerElements();
+function showA2HSBanner({ showInstallButton, text: messageText }) {
+  const { banner, installBtn, closeBtn, text } = getA2HSBannerElements();
   if (!banner) return;
   shieldElementFromGameTouch(banner);
   shieldElementFromGameTouch(installBtn);
-  shieldElementFromGameTouch(openBtn);
   shieldElementFromGameTouch(closeBtn);
   
   // Clear all existing styles and CSS variables - use explicit styles only
@@ -148,28 +146,6 @@ function showA2HSBanner({ showInstallButton, showOpenButton, text: messageText }
     }
   }
   
-  if (openBtn) {
-    openBtn.style.display = showOpenButton ? 'inline-block' : 'none';
-    openBtn.style.backgroundColor = '#2ecc71';
-    openBtn.style.color = '#ffffff';
-    openBtn.style.border = 'none';
-    openBtn.style.padding = '12px 14px';
-    openBtn.style.borderRadius = '8px';
-    openBtn.style.fontSize = '16px';
-    openBtn.style.cursor = 'pointer';
-    openBtn.style.fontFamily = 'Helvetica, Arial, sans-serif';
-    openBtn.style.flexShrink = '0';
-    openBtn.style.whiteSpace = 'nowrap';
-    openBtn.style.minWidth = '88px';
-    openBtn.style.minHeight = '44px';
-    openBtn.style.pointerEvents = 'auto';
-    openBtn.style.touchAction = 'manipulation';
-    // Ensure button has text content
-    if (!openBtn.textContent) {
-      openBtn.textContent = 'Open App';
-    }
-  }
-  
   if (closeBtn) {
     closeBtn.style.backgroundColor = 'transparent';
     closeBtn.style.color = '#ffffff';
@@ -209,8 +185,8 @@ function initA2HSBanner() {
     // Prevent the mini-infobar from appearing
     e.preventDefault();
     __deferredA2HSPrompt = e;
-    const { installBtn, openBtn, banner } = getA2HSBannerElements();
-    showA2HSBanner({ showInstallButton: true, showOpenButton: false, text: 'Install for best experience' });
+    const { installBtn, banner } = getA2HSBannerElements();
+    showA2HSBanner({ showInstallButton: true, text: 'Install for best experience' });
     if (installBtn) {
       installBtn.textContent = 'Install';
       bindTapAction(installBtn, async () => {
@@ -226,7 +202,7 @@ function initA2HSBanner() {
   // Handle iOS Safari (no beforeinstallprompt)
   if (isIOS) {
     const { installBtn, iosOverlay, iosCloseBtn } = getA2HSBannerElements();
-    showA2HSBanner({ showInstallButton: true, showOpenButton: false, text: 'Install for best experience' });
+    showA2HSBanner({ showInstallButton: true, text: 'Install for best experience' });
     if (installBtn) {
       installBtn.textContent = 'How to Install';
       bindTapAction(installBtn, () => {
@@ -249,7 +225,7 @@ function initA2HSBanner() {
       if (!__deferredA2HSPrompt && !isStandaloneDisplayMode()) {
         // Fallback: provide actionable instructions when install prompt is unavailable.
         const { installBtn } = getA2HSBannerElements();
-        showA2HSBanner({ showInstallButton: true, showOpenButton: false, text: 'Install for best experience' });
+        showA2HSBanner({ showInstallButton: true, text: 'Install for best experience' });
         if (installBtn) {
           installBtn.textContent = 'How to Install';
           bindTapAction(installBtn, () => {

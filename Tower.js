@@ -1,6 +1,5 @@
 ﻿class Tower {
   constructor(tempType, tempCost, tempDamage, tempRange, tempRate) {
-    this.projectiles = [];
     this.cost = tempCost;
     this.baseCost = tempCost;
     const resaleCfg =
@@ -160,24 +159,6 @@
       }
     } else if (shouldCommitPlacement) {
       this.del = true;
-    }
-  }
-
-  updateProjectiles() {
-    for (let i = 0; i < this.projectiles.length; i++) {
-      this.projectiles[i].move();
-      this.projectiles[i].draw();
-      if (!this.projectileInside(i)) {
-        this.projectiles.splice(i, 1);
-        i--;
-        continue;
-      }
-      if (this.projectiles.length > 0 && this.projectiles.length > i) {
-        if (this.projectiles[i].del) {
-          this.projectiles.splice(i, 1);
-          i--;
-        }
-      }
     }
   }
 
@@ -439,13 +420,6 @@
     const dx = this.x - (enemies[i].x + enemies[i].rX);
     const dy = this.y - (enemies[i].y + enemies[i].rY);
     const r = this.range / 2 + enemies[i].d / 2;
-    return dx * dx + dy * dy < r * r;
-  }
-
-  projectileInside(i) {
-    const dx = this.x - this.projectiles[i].x;
-    const dy = this.y - this.projectiles[i].y;
-    const r = this.range / 2 + this.projectiles[i].d / 2;
     return dx * dx + dy * dy < r * r;
   }
 
